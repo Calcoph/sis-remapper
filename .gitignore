@@ -1,0 +1,8 @@
+/target
+/libs
+setEnvs.ps1
+/icue-bindings/target
+/config-parse/target
+/sis-remapper/target
+/ignore
+/config.txt

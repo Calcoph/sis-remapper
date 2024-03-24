@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = [
+    "icue-bindings",
+    "config-parse",
+    "sis-remapper",
+    "sis-core",
+]
