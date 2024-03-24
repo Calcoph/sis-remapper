@@ -212,13 +212,66 @@ impl VirtualKey {
     pub fn to_scan(&self) -> u16 {
         use VirtualKey as VK;
         match self {
-            VK::B => 0x30,
-            VK::P => 0x19,
-            VK::J => 0x24,
+            VK::Esc => 0x01,
+            VK::N1 => 0x02,
+            VK::N2 => 0x03,
+            VK::N3 => 0x04,
+            VK::N4 => 0x05,
+            VK::N5 => 0x06,
+            VK::N6 => 0x07,
+            VK::N7 => 0x08,
+            VK::N8 => 0x09,
+            VK::N9 => 0x0A,
+            VK::N0 => 0x0B,
+            VK::Sub => 0x0C,
+            VK::Add => 0x0D,
+            VK::Backspace => 0x0E,
+
+            VK::Tab => 0x0F,
+            VK::Q => 0x10,
+            VK::W => 0x11,
+            VK::E => 0x12,
+            VK::R => 0x13,
+            VK::T => 0x14,
+            VK::Y => 0x15,
+            VK::U => 0x16,
             VK::I => 0x17,
-            VK::Control => 0x1D,
-            VK::Alt => 0x38,
-            _ => todo!()
+            VK::O => 0x18,
+            VK::P => 0x19,
+            // Bracket? VK:: => 0x1A
+            // closing Bracket? VK:: => 0x1B
+            VK::Return => 0x1C,
+            VK::LControl => 0x1D,
+
+            VK::A => 0x1E,
+            VK::S => 0x1F,
+            VK::D => 0x20,
+            VK::F => 0x21,
+            VK::G => 0x22,
+            VK::H => 0x23,
+            VK::J => 0x24,
+            VK::K => 0x25,
+            VK::L => 0x26,
+            // Colon? VK::Col => 0x27
+            // Quote? => 0x28
+            // Tilde? => 0x29
+
+            VK::LShift => 0x2A,
+            // Backslash? VK
+            VK::Z => 0x2C,
+            VK::X => 0x2D,
+            VK::C => 0x2E,
+            VK::V => 0x2F,
+            VK::B => 0x30,
+            VK::N => 0x31,
+            VK::M => 0x32,
+            // comma? => 0x33
+            // period? => 0x34
+            // slash? => 0x35
+            VK::RShift => 0x36,
+
+            // Numpad mult? => 0x37
+            _ => 0x01
         }
     }
 }
