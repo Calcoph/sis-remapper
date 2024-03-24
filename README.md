@@ -5,8 +5,9 @@ This project (technically works, for my setup) is not complete, therefore it wil
 This tool allows you to set global hotkeys (remap keys), and control (corsair) keyboard lights (using iCUE). It only works on windows.
 
 # How to use it
-1. Download the iCUE SDK .dll
-2. Set the CUE_SDK_LIB_FILES_PATH enviroment value to the directory where the SDK .dll is contained
+1. Download the iCUE SDK .dll and .lib
+2. Set the CUE_SDK_LIB_FILES_PATH enviroment value to the directory where the SDK .lib is contained (only for compilation)
+2. Add the folder containing the .dll to PATH (only for running the program)
 3. Create a config.txt with your configuration in it
 4. Compile and run the program `cargo run`
 
