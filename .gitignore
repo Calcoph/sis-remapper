@@ -6,3 +6,4 @@ setEnvs.ps1
 /sis-remapper/target
 /ignore
 /config.txt
+/dist
