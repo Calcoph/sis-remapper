@@ -8,8 +8,8 @@ pub(crate) const CORSAIR_STRING_SIZE_M: ::std::os::raw::c_uint = 128;
 pub(crate) const CORSAIR_LAYER_PRIORITY_MAX: ::std::os::raw::c_uint = 255;
 pub(crate) const CORSAIR_DEVICE_COUNT_MAX: ::std::os::raw::c_uint = 64;
 pub(crate) const CORSAIR_DEVICE_LEDCOUNT_MAX: ::std::os::raw::c_uint = 512;
-pub type CorsairDeviceId = [::std::os::raw::c_char; 128usize];
-pub type CorsairLedLuid = ::std::os::raw::c_uint;
+type CorsairDeviceId = [::std::os::raw::c_char; 128usize];
+pub(crate) type CorsairLedLuid = ::std::os::raw::c_uint;
 pub(crate) const CorsairError_CE_Success: CorsairError = 0;
 pub(crate) const CorsairError_CE_NotConnected: CorsairError = 1;
 pub(crate) const CorsairError_CE_NoControl: CorsairError = 2;
@@ -18,139 +18,138 @@ pub(crate) const CorsairError_CE_InvalidArguments: CorsairError = 4;
 pub(crate) const CorsairError_CE_InvalidOperation: CorsairError = 5;
 pub(crate) const CorsairError_CE_DeviceNotFound: CorsairError = 6;
 pub(crate) const CorsairError_CE_NotAllowed: CorsairError = 7;
-pub type CorsairError = ::std::os::raw::c_uint;
-pub const CorsairSessionState_CSS_Invalid: CorsairSessionState = 0;
-pub const CorsairSessionState_CSS_Closed: CorsairSessionState = 1;
-pub const CorsairSessionState_CSS_Connecting: CorsairSessionState = 2;
-pub const CorsairSessionState_CSS_Timeout: CorsairSessionState = 3;
-pub const CorsairSessionState_CSS_ConnectionRefused: CorsairSessionState = 4;
-pub const CorsairSessionState_CSS_ConnectionLost: CorsairSessionState = 5;
-pub const CorsairSessionState_CSS_Connected: CorsairSessionState = 6;
-pub type CorsairSessionState = ::std::os::raw::c_uint;
-pub const CorsairDeviceType_CDT_Unknown: CorsairDeviceType = 0;
-pub const CorsairDeviceType_CDT_Keyboard: CorsairDeviceType = 1;
-pub const CorsairDeviceType_CDT_Mouse: CorsairDeviceType = 2;
-pub const CorsairDeviceType_CDT_Mousemat: CorsairDeviceType = 4;
-pub const CorsairDeviceType_CDT_Headset: CorsairDeviceType = 8;
-pub const CorsairDeviceType_CDT_HeadsetStand: CorsairDeviceType = 16;
-pub const CorsairDeviceType_CDT_FanLedController: CorsairDeviceType = 32;
-pub const CorsairDeviceType_CDT_LedController: CorsairDeviceType = 64;
-pub const CorsairDeviceType_CDT_MemoryModule: CorsairDeviceType = 128;
-pub const CorsairDeviceType_CDT_Cooler: CorsairDeviceType = 256;
-pub const CorsairDeviceType_CDT_Motherboard: CorsairDeviceType = 512;
-pub const CorsairDeviceType_CDT_GraphicsCard: CorsairDeviceType = 1024;
-pub const CorsairDeviceType_CDT_Touchbar: CorsairDeviceType = 2048;
-pub const CorsairDeviceType_CDT_GameController: CorsairDeviceType = 4096;
-pub const CorsairDeviceType_CDT_All: CorsairDeviceType = 4294967295;
+pub(crate) type CorsairError = ::std::os::raw::c_uint;
+pub(crate) const CorsairSessionState_CSS_Invalid: CorsairSessionState = 0;
+pub(crate) const CorsairSessionState_CSS_Closed: CorsairSessionState = 1;
+pub(crate) const CorsairSessionState_CSS_Connecting: CorsairSessionState = 2;
+pub(crate) const CorsairSessionState_CSS_Timeout: CorsairSessionState = 3;
+pub(crate) const CorsairSessionState_CSS_ConnectionRefused: CorsairSessionState = 4;
+pub(crate) const CorsairSessionState_CSS_ConnectionLost: CorsairSessionState = 5;
+pub(crate) const CorsairSessionState_CSS_Connected: CorsairSessionState = 6;
+pub(crate) type CorsairSessionState = ::std::os::raw::c_uint;
+pub(crate) const CorsairDeviceType_CDT_Unknown: CorsairDeviceType = 0;
+pub(crate) const CorsairDeviceType_CDT_Keyboard: CorsairDeviceType = 1;
+pub(crate) const CorsairDeviceType_CDT_Mouse: CorsairDeviceType = 2;
+pub(crate) const CorsairDeviceType_CDT_Mousemat: CorsairDeviceType = 4;
+pub(crate) const CorsairDeviceType_CDT_Headset: CorsairDeviceType = 8;
+pub(crate) const CorsairDeviceType_CDT_HeadsetStand: CorsairDeviceType = 16;
+pub(crate) const CorsairDeviceType_CDT_FanLedController: CorsairDeviceType = 32;
+pub(crate) const CorsairDeviceType_CDT_LedController: CorsairDeviceType = 64;
+pub(crate) const CorsairDeviceType_CDT_MemoryModule: CorsairDeviceType = 128;
+pub(crate) const CorsairDeviceType_CDT_Cooler: CorsairDeviceType = 256;
+pub(crate) const CorsairDeviceType_CDT_Motherboard: CorsairDeviceType = 512;
+pub(crate) const CorsairDeviceType_CDT_GraphicsCard: CorsairDeviceType = 1024;
+pub(crate) const CorsairDeviceType_CDT_Touchbar: CorsairDeviceType = 2048;
+pub(crate) const CorsairDeviceType_CDT_GameController: CorsairDeviceType = 4096;
+pub(crate) const CorsairDeviceType_CDT_All: CorsairDeviceType = 4294967295;
 pub(crate) type CorsairDeviceType = ::std::os::raw::c_uint;
-pub const CorsairEventId_CEI_Invalid: CorsairEventId = 0;
-pub const CorsairEventId_CEI_DeviceConnectionStatusChangedEvent: CorsairEventId = 1;
-pub const CorsairEventId_CEI_KeyEvent: CorsairEventId = 2;
-pub type CorsairEventId = ::std::os::raw::c_uint;
-pub const CorsairMacroKeyId_CMKI_Invalid: CorsairMacroKeyId = 0;
-pub const CorsairMacroKeyId_CMKI_1: CorsairMacroKeyId = 1;
-pub const CorsairMacroKeyId_CMKI_2: CorsairMacroKeyId = 2;
-pub const CorsairMacroKeyId_CMKI_3: CorsairMacroKeyId = 3;
-pub const CorsairMacroKeyId_CMKI_4: CorsairMacroKeyId = 4;
-pub const CorsairMacroKeyId_CMKI_5: CorsairMacroKeyId = 5;
-pub const CorsairMacroKeyId_CMKI_6: CorsairMacroKeyId = 6;
-pub const CorsairMacroKeyId_CMKI_7: CorsairMacroKeyId = 7;
-pub const CorsairMacroKeyId_CMKI_8: CorsairMacroKeyId = 8;
-pub const CorsairMacroKeyId_CMKI_9: CorsairMacroKeyId = 9;
-pub const CorsairMacroKeyId_CMKI_10: CorsairMacroKeyId = 10;
-pub const CorsairMacroKeyId_CMKI_11: CorsairMacroKeyId = 11;
-pub const CorsairMacroKeyId_CMKI_12: CorsairMacroKeyId = 12;
-pub const CorsairMacroKeyId_CMKI_13: CorsairMacroKeyId = 13;
-pub const CorsairMacroKeyId_CMKI_14: CorsairMacroKeyId = 14;
-pub const CorsairMacroKeyId_CMKI_15: CorsairMacroKeyId = 15;
-pub const CorsairMacroKeyId_CMKI_16: CorsairMacroKeyId = 16;
-pub const CorsairMacroKeyId_CMKI_17: CorsairMacroKeyId = 17;
-pub const CorsairMacroKeyId_CMKI_18: CorsairMacroKeyId = 18;
-pub const CorsairMacroKeyId_CMKI_19: CorsairMacroKeyId = 19;
-pub const CorsairMacroKeyId_CMKI_20: CorsairMacroKeyId = 20;
-pub type CorsairMacroKeyId = ::std::os::raw::c_uint;
-pub const CorsairDevicePropertyId_CDPI_Invalid: CorsairDevicePropertyId = 0;
-pub const CorsairDevicePropertyId_CDPI_PropertyArray: CorsairDevicePropertyId = 1;
-pub const CorsairDevicePropertyId_CDPI_MicEnabled: CorsairDevicePropertyId = 2;
-pub const CorsairDevicePropertyId_CDPI_SurroundSoundEnabled: CorsairDevicePropertyId = 3;
-pub const CorsairDevicePropertyId_CDPI_SidetoneEnabled: CorsairDevicePropertyId = 4;
-pub const CorsairDevicePropertyId_CDPI_EqualizerPreset: CorsairDevicePropertyId = 5;
-pub const CorsairDevicePropertyId_CDPI_PhysicalLayout: CorsairDevicePropertyId = 6;
-pub const CorsairDevicePropertyId_CDPI_LogicalLayout: CorsairDevicePropertyId = 7;
-pub const CorsairDevicePropertyId_CDPI_MacroKeyArray: CorsairDevicePropertyId = 8;
-pub const CorsairDevicePropertyId_CDPI_BatteryLevel: CorsairDevicePropertyId = 9;
-pub const CorsairDevicePropertyId_CDPI_ChannelLedCount: CorsairDevicePropertyId = 10;
-pub const CorsairDevicePropertyId_CDPI_ChannelDeviceCount: CorsairDevicePropertyId = 11;
-pub const CorsairDevicePropertyId_CDPI_ChannelDeviceLedCountArray: CorsairDevicePropertyId = 12;
-pub const CorsairDevicePropertyId_CDPI_ChannelDeviceTypeArray: CorsairDevicePropertyId = 13;
-pub type CorsairDevicePropertyId = ::std::os::raw::c_uint;
-pub const CorsairDataType_CT_Boolean: CorsairDataType = 0;
-pub const CorsairDataType_CT_Int32: CorsairDataType = 1;
-pub const CorsairDataType_CT_Float64: CorsairDataType = 2;
-pub const CorsairDataType_CT_String: CorsairDataType = 3;
-pub const CorsairDataType_CT_Boolean_Array: CorsairDataType = 16;
-pub const CorsairDataType_CT_Int32_Array: CorsairDataType = 17;
-pub const CorsairDataType_CT_Float64_Array: CorsairDataType = 18;
-pub const CorsairDataType_CT_String_Array: CorsairDataType = 19;
-pub type CorsairDataType = ::std::os::raw::c_uint;
-pub const CorsairPropertyFlag_CPF_None: CorsairPropertyFlag = 0;
-pub const CorsairPropertyFlag_CPF_CanRead: CorsairPropertyFlag = 1;
-pub const CorsairPropertyFlag_CPF_CanWrite: CorsairPropertyFlag = 2;
-pub const CorsairPropertyFlag_CPF_Indexed: CorsairPropertyFlag = 4;
-pub type CorsairPropertyFlag = ::std::os::raw::c_uint;
-pub const CorsairPhysicalLayout_CPL_Invalid: CorsairPhysicalLayout = 0;
-pub const CorsairPhysicalLayout_CPL_US: CorsairPhysicalLayout = 1;
-pub const CorsairPhysicalLayout_CPL_UK: CorsairPhysicalLayout = 2;
-pub const CorsairPhysicalLayout_CPL_JP: CorsairPhysicalLayout = 3;
-pub const CorsairPhysicalLayout_CPL_KR: CorsairPhysicalLayout = 4;
-pub const CorsairPhysicalLayout_CPL_BR: CorsairPhysicalLayout = 5;
-pub type CorsairPhysicalLayout = ::std::os::raw::c_uint;
-pub const CorsairLogicalLayout_CLL_Invalid: CorsairLogicalLayout = 0;
-pub const CorsairLogicalLayout_CLL_US_Int: CorsairLogicalLayout = 1;
-pub const CorsairLogicalLayout_CLL_NA: CorsairLogicalLayout = 2;
-pub const CorsairLogicalLayout_CLL_EU: CorsairLogicalLayout = 3;
-pub const CorsairLogicalLayout_CLL_UK: CorsairLogicalLayout = 4;
-pub const CorsairLogicalLayout_CLL_BE: CorsairLogicalLayout = 5;
-pub const CorsairLogicalLayout_CLL_BR: CorsairLogicalLayout = 6;
-pub const CorsairLogicalLayout_CLL_CH: CorsairLogicalLayout = 7;
-pub const CorsairLogicalLayout_CLL_CN: CorsairLogicalLayout = 8;
-pub const CorsairLogicalLayout_CLL_DE: CorsairLogicalLayout = 9;
-pub const CorsairLogicalLayout_CLL_ES: CorsairLogicalLayout = 10;
-pub const CorsairLogicalLayout_CLL_FR: CorsairLogicalLayout = 11;
-pub const CorsairLogicalLayout_CLL_IT: CorsairLogicalLayout = 12;
-pub const CorsairLogicalLayout_CLL_ND: CorsairLogicalLayout = 13;
-pub const CorsairLogicalLayout_CLL_RU: CorsairLogicalLayout = 14;
-pub const CorsairLogicalLayout_CLL_JP: CorsairLogicalLayout = 15;
-pub const CorsairLogicalLayout_CLL_KR: CorsairLogicalLayout = 16;
-pub const CorsairLogicalLayout_CLL_TW: CorsairLogicalLayout = 17;
-pub const CorsairLogicalLayout_CLL_MEX: CorsairLogicalLayout = 18;
-pub type CorsairLogicalLayout = ::std::os::raw::c_uint;
-pub const CorsairChannelDeviceType_CCDT_Invalid: CorsairChannelDeviceType = 0;
-pub const CorsairChannelDeviceType_CCDT_HD_Fan: CorsairChannelDeviceType = 1;
-pub const CorsairChannelDeviceType_CCDT_SP_Fan: CorsairChannelDeviceType = 2;
-pub const CorsairChannelDeviceType_CCDT_LL_Fan: CorsairChannelDeviceType = 3;
-pub const CorsairChannelDeviceType_CCDT_ML_Fan: CorsairChannelDeviceType = 4;
-pub const CorsairChannelDeviceType_CCDT_QL_Fan: CorsairChannelDeviceType = 5;
-pub const CorsairChannelDeviceType_CCDT_8LedSeriesFan: CorsairChannelDeviceType = 6;
-pub const CorsairChannelDeviceType_CCDT_Strip: CorsairChannelDeviceType = 7;
-pub const CorsairChannelDeviceType_CCDT_DAP: CorsairChannelDeviceType = 8;
-pub const CorsairChannelDeviceType_CCDT_Pump: CorsairChannelDeviceType = 9;
-pub const CorsairChannelDeviceType_CCDT_DRAM: CorsairChannelDeviceType = 10;
-pub const CorsairChannelDeviceType_CCDT_WaterBlock: CorsairChannelDeviceType = 11;
-pub const CorsairChannelDeviceType_CCDT_QX_Fan: CorsairChannelDeviceType = 12;
-pub type CorsairChannelDeviceType = ::std::os::raw::c_uint;
-pub const CorsairAccessLevel_CAL_Shared: CorsairAccessLevel = 0;
-pub const CorsairAccessLevel_CAL_ExclusiveLightingControl: CorsairAccessLevel = 1;
-pub const CorsairAccessLevel_CAL_ExclusiveKeyEventsListening: CorsairAccessLevel = 2;
-pub const CorsairAccessLevel_CAL_ExclusiveLightingControlAndKeyEventsListening: CorsairAccessLevel =
-    3;
-pub type CorsairAccessLevel = ::std::os::raw::c_uint;
+pub(crate) const CorsairEventId_CEI_Invalid: CorsairEventId = 0;
+pub(crate) const CorsairEventId_CEI_DeviceConnectionStatusChangedEvent: CorsairEventId = 1;
+pub(crate) const CorsairEventId_CEI_KeyEvent: CorsairEventId = 2;
+type CorsairEventId = ::std::os::raw::c_uint;
+pub(crate) const CorsairMacroKeyId_CMKI_Invalid: CorsairMacroKeyId = 0;
+pub(crate) const CorsairMacroKeyId_CMKI_1: CorsairMacroKeyId = 1;
+pub(crate) const CorsairMacroKeyId_CMKI_2: CorsairMacroKeyId = 2;
+pub(crate) const CorsairMacroKeyId_CMKI_3: CorsairMacroKeyId = 3;
+pub(crate) const CorsairMacroKeyId_CMKI_4: CorsairMacroKeyId = 4;
+pub(crate) const CorsairMacroKeyId_CMKI_5: CorsairMacroKeyId = 5;
+pub(crate) const CorsairMacroKeyId_CMKI_6: CorsairMacroKeyId = 6;
+pub(crate) const CorsairMacroKeyId_CMKI_7: CorsairMacroKeyId = 7;
+pub(crate) const CorsairMacroKeyId_CMKI_8: CorsairMacroKeyId = 8;
+pub(crate) const CorsairMacroKeyId_CMKI_9: CorsairMacroKeyId = 9;
+pub(crate) const CorsairMacroKeyId_CMKI_10: CorsairMacroKeyId = 10;
+pub(crate) const CorsairMacroKeyId_CMKI_11: CorsairMacroKeyId = 11;
+pub(crate) const CorsairMacroKeyId_CMKI_12: CorsairMacroKeyId = 12;
+pub(crate) const CorsairMacroKeyId_CMKI_13: CorsairMacroKeyId = 13;
+pub(crate) const CorsairMacroKeyId_CMKI_14: CorsairMacroKeyId = 14;
+pub(crate) const CorsairMacroKeyId_CMKI_15: CorsairMacroKeyId = 15;
+pub(crate) const CorsairMacroKeyId_CMKI_16: CorsairMacroKeyId = 16;
+pub(crate) const CorsairMacroKeyId_CMKI_17: CorsairMacroKeyId = 17;
+pub(crate) const CorsairMacroKeyId_CMKI_18: CorsairMacroKeyId = 18;
+pub(crate) const CorsairMacroKeyId_CMKI_19: CorsairMacroKeyId = 19;
+pub(crate) const CorsairMacroKeyId_CMKI_20: CorsairMacroKeyId = 20;
+type CorsairMacroKeyId = ::std::os::raw::c_uint;
+pub(crate) const CorsairDevicePropertyId_CDPI_Invalid: CorsairDevicePropertyId = 0;
+pub(crate) const CorsairDevicePropertyId_CDPI_PropertyArray: CorsairDevicePropertyId = 1;
+pub(crate) const CorsairDevicePropertyId_CDPI_MicEnabled: CorsairDevicePropertyId = 2;
+pub(crate) const CorsairDevicePropertyId_CDPI_SurroundSoundEnabled: CorsairDevicePropertyId = 3;
+pub(crate) const CorsairDevicePropertyId_CDPI_SidetoneEnabled: CorsairDevicePropertyId = 4;
+pub(crate) const CorsairDevicePropertyId_CDPI_EqualizerPreset: CorsairDevicePropertyId = 5;
+pub(crate) const CorsairDevicePropertyId_CDPI_PhysicalLayout: CorsairDevicePropertyId = 6;
+pub(crate) const CorsairDevicePropertyId_CDPI_LogicalLayout: CorsairDevicePropertyId = 7;
+pub(crate) const CorsairDevicePropertyId_CDPI_MacroKeyArray: CorsairDevicePropertyId = 8;
+pub(crate) const CorsairDevicePropertyId_CDPI_BatteryLevel: CorsairDevicePropertyId = 9;
+pub(crate) const CorsairDevicePropertyId_CDPI_ChannelLedCount: CorsairDevicePropertyId = 10;
+pub(crate) const CorsairDevicePropertyId_CDPI_ChannelDeviceCount: CorsairDevicePropertyId = 11;
+pub(crate) const CorsairDevicePropertyId_CDPI_ChannelDeviceLedCountArray: CorsairDevicePropertyId = 12;
+pub(crate) const CorsairDevicePropertyId_CDPI_ChannelDeviceTypeArray: CorsairDevicePropertyId = 13;
+type CorsairDevicePropertyId = ::std::os::raw::c_uint;
+pub(crate) const CorsairDataType_CT_Boolean: CorsairDataType = 0;
+pub(crate) const CorsairDataType_CT_Int32: CorsairDataType = 1;
+pub(crate) const CorsairDataType_CT_Float64: CorsairDataType = 2;
+pub(crate) const CorsairDataType_CT_String: CorsairDataType = 3;
+pub(crate) const CorsairDataType_CT_Boolean_Array: CorsairDataType = 16;
+pub(crate) const CorsairDataType_CT_Int32_Array: CorsairDataType = 17;
+pub(crate) const CorsairDataType_CT_Float64_Array: CorsairDataType = 18;
+pub(crate) const CorsairDataType_CT_String_Array: CorsairDataType = 19;
+type CorsairDataType = ::std::os::raw::c_uint;
+pub(crate) const CorsairPropertyFlag_CPF_None: CorsairPropertyFlag = 0;
+pub(crate) const CorsairPropertyFlag_CPF_CanRead: CorsairPropertyFlag = 1;
+pub(crate) const CorsairPropertyFlag_CPF_CanWrite: CorsairPropertyFlag = 2;
+pub(crate) const CorsairPropertyFlag_CPF_Indexed: CorsairPropertyFlag = 4;
+pub(crate) type CorsairPropertyFlag = ::std::os::raw::c_uint;
+pub(crate) const CorsairPhysicalLayout_CPL_Invalid: CorsairPhysicalLayout = 0;
+pub(crate) const CorsairPhysicalLayout_CPL_US: CorsairPhysicalLayout = 1;
+pub(crate) const CorsairPhysicalLayout_CPL_UK: CorsairPhysicalLayout = 2;
+pub(crate) const CorsairPhysicalLayout_CPL_JP: CorsairPhysicalLayout = 3;
+pub(crate) const CorsairPhysicalLayout_CPL_KR: CorsairPhysicalLayout = 4;
+pub(crate) const CorsairPhysicalLayout_CPL_BR: CorsairPhysicalLayout = 5;
+type CorsairPhysicalLayout = ::std::os::raw::c_uint;
+pub(crate) const CorsairLogicalLayout_CLL_Invalid: CorsairLogicalLayout = 0;
+pub(crate) const CorsairLogicalLayout_CLL_US_Int: CorsairLogicalLayout = 1;
+pub(crate) const CorsairLogicalLayout_CLL_NA: CorsairLogicalLayout = 2;
+pub(crate) const CorsairLogicalLayout_CLL_EU: CorsairLogicalLayout = 3;
+pub(crate) const CorsairLogicalLayout_CLL_UK: CorsairLogicalLayout = 4;
+pub(crate) const CorsairLogicalLayout_CLL_BE: CorsairLogicalLayout = 5;
+pub(crate) const CorsairLogicalLayout_CLL_BR: CorsairLogicalLayout = 6;
+pub(crate) const CorsairLogicalLayout_CLL_CH: CorsairLogicalLayout = 7;
+pub(crate) const CorsairLogicalLayout_CLL_CN: CorsairLogicalLayout = 8;
+pub(crate) const CorsairLogicalLayout_CLL_DE: CorsairLogicalLayout = 9;
+pub(crate) const CorsairLogicalLayout_CLL_ES: CorsairLogicalLayout = 10;
+pub(crate) const CorsairLogicalLayout_CLL_FR: CorsairLogicalLayout = 11;
+pub(crate) const CorsairLogicalLayout_CLL_IT: CorsairLogicalLayout = 12;
+pub(crate) const CorsairLogicalLayout_CLL_ND: CorsairLogicalLayout = 13;
+pub(crate) const CorsairLogicalLayout_CLL_RU: CorsairLogicalLayout = 14;
+pub(crate) const CorsairLogicalLayout_CLL_JP: CorsairLogicalLayout = 15;
+pub(crate) const CorsairLogicalLayout_CLL_KR: CorsairLogicalLayout = 16;
+pub(crate) const CorsairLogicalLayout_CLL_TW: CorsairLogicalLayout = 17;
+pub(crate) const CorsairLogicalLayout_CLL_MEX: CorsairLogicalLayout = 18;
+type CorsairLogicalLayout = ::std::os::raw::c_uint;
+pub(crate) const CorsairChannelDeviceType_CCDT_Invalid: CorsairChannelDeviceType = 0;
+pub(crate) const CorsairChannelDeviceType_CCDT_HD_Fan: CorsairChannelDeviceType = 1;
+pub(crate) const CorsairChannelDeviceType_CCDT_SP_Fan: CorsairChannelDeviceType = 2;
+pub(crate) const CorsairChannelDeviceType_CCDT_LL_Fan: CorsairChannelDeviceType = 3;
+pub(crate) const CorsairChannelDeviceType_CCDT_ML_Fan: CorsairChannelDeviceType = 4;
+pub(crate) const CorsairChannelDeviceType_CCDT_QL_Fan: CorsairChannelDeviceType = 5;
+pub(crate) const CorsairChannelDeviceType_CCDT_8LedSeriesFan: CorsairChannelDeviceType = 6;
+pub(crate) const CorsairChannelDeviceType_CCDT_Strip: CorsairChannelDeviceType = 7;
+pub(crate) const CorsairChannelDeviceType_CCDT_DAP: CorsairChannelDeviceType = 8;
+pub(crate) const CorsairChannelDeviceType_CCDT_Pump: CorsairChannelDeviceType = 9;
+pub(crate) const CorsairChannelDeviceType_CCDT_DRAM: CorsairChannelDeviceType = 10;
+pub(crate) const CorsairChannelDeviceType_CCDT_WaterBlock: CorsairChannelDeviceType = 11;
+pub(crate) const CorsairChannelDeviceType_CCDT_QX_Fan: CorsairChannelDeviceType = 12;
+type CorsairChannelDeviceType = ::std::os::raw::c_uint;
+pub(crate) const CorsairAccessLevel_CAL_Shared: CorsairAccessLevel = 0;
+pub(crate) const CorsairAccessLevel_CAL_ExclusiveLightingControl: CorsairAccessLevel = 1;
+pub(crate) const CorsairAccessLevel_CAL_ExclusiveKeyEventsListening: CorsairAccessLevel = 2;
+pub(crate) const CorsairAccessLevel_CAL_ExclusiveLightingControlAndKeyEventsListening: CorsairAccessLevel = 3;
+type CorsairAccessLevel = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairVersion {
-    pub major: ::std::os::raw::c_int,
-    pub minor: ::std::os::raw::c_int,
-    pub patch: ::std::os::raw::c_int,
+pub(crate) struct CorsairVersion {
+    pub(crate) major: ::std::os::raw::c_int,
+    pub(crate) minor: ::std::os::raw::c_int,
+    pub(crate) patch: ::std::os::raw::c_int,
 }
 #[test]
 fn bindgen_test_layout_CorsairVersion() {
@@ -199,10 +198,10 @@ fn bindgen_test_layout_CorsairVersion() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairSessionDetails {
-    pub clientVersion: CorsairVersion,
-    pub serverVersion: CorsairVersion,
-    pub serverHostVersion: CorsairVersion,
+pub(crate) struct CorsairSessionDetails {
+    pub(crate) clientVersion: CorsairVersion,
+    pub(crate) serverVersion: CorsairVersion,
+    pub(crate) serverHostVersion: CorsairVersion,
 }
 #[test]
 fn bindgen_test_layout_CorsairSessionDetails() {
@@ -252,9 +251,9 @@ fn bindgen_test_layout_CorsairSessionDetails() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairSessionStateChanged {
-    pub state: CorsairSessionState,
-    pub details: CorsairSessionDetails,
+pub(crate) struct CorsairSessionStateChanged {
+    pub(crate) state: CorsairSessionState,
+    pub(crate) details: CorsairSessionDetails,
 }
 #[test]
 fn bindgen_test_layout_CorsairSessionStateChanged() {
@@ -294,13 +293,13 @@ fn bindgen_test_layout_CorsairSessionStateChanged() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairDeviceInfo {
-    pub type_: CorsairDeviceType,
-    pub id: CorsairDeviceId,
-    pub serial: [::std::os::raw::c_char; 128usize],
-    pub model: [::std::os::raw::c_char; 128usize],
-    pub ledCount: ::std::os::raw::c_int,
-    pub channelCount: ::std::os::raw::c_int,
+pub(crate) struct CorsairDeviceInfo {
+    pub(crate) type_: CorsairDeviceType,
+    pub(crate) id: CorsairDeviceId,
+    pub(crate) serial: [::std::os::raw::c_char; 128usize],
+    pub(crate) model: [::std::os::raw::c_char; 128usize],
+    pub(crate) ledCount: ::std::os::raw::c_int,
+    pub(crate) channelCount: ::std::os::raw::c_int,
 }
 #[test]
 fn bindgen_test_layout_CorsairDeviceInfo() {
@@ -379,10 +378,10 @@ fn bindgen_test_layout_CorsairDeviceInfo() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairLedPosition {
-    pub id: CorsairLedLuid,
-    pub cx: f64,
-    pub cy: f64,
+pub(crate) struct CorsairLedPosition {
+    pub(crate) id: CorsairLedLuid,
+    pub(crate) cx: f64,
+    pub(crate) cy: f64,
 }
 #[test]
 fn bindgen_test_layout_CorsairLedPosition() {
@@ -431,8 +430,8 @@ fn bindgen_test_layout_CorsairLedPosition() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairDeviceFilter {
-    pub deviceTypeMask: ::std::os::raw::c_int,
+pub(crate) struct CorsairDeviceFilter {
+    pub(crate) deviceTypeMask: ::std::os::raw::c_int,
 }
 #[test]
 fn bindgen_test_layout_CorsairDeviceFilter() {
@@ -461,9 +460,9 @@ fn bindgen_test_layout_CorsairDeviceFilter() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairDeviceConnectionStatusChangedEvent {
-    pub deviceId: CorsairDeviceId,
-    pub isConnected: bool,
+pub(crate) struct CorsairDeviceConnectionStatusChangedEvent {
+    pub(crate) deviceId: CorsairDeviceId,
+    pub(crate) isConnected: bool,
 }
 #[test]
 fn bindgen_test_layout_CorsairDeviceConnectionStatusChangedEvent() {
@@ -509,10 +508,10 @@ fn bindgen_test_layout_CorsairDeviceConnectionStatusChangedEvent() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairKeyEvent {
-    pub deviceId: CorsairDeviceId,
-    pub keyId: CorsairMacroKeyId,
-    pub isPressed: bool,
+pub(crate) struct CorsairKeyEvent {
+    pub(crate) deviceId: CorsairDeviceId,
+    pub(crate) keyId: CorsairMacroKeyId,
+    pub(crate) isPressed: bool,
 }
 #[test]
 fn bindgen_test_layout_CorsairKeyEvent() {
@@ -561,15 +560,15 @@ fn bindgen_test_layout_CorsairKeyEvent() {
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct CorsairEvent {
-    pub id: CorsairEventId,
-    pub __bindgen_anon_1: CorsairEvent__bindgen_ty_1,
+pub(crate) struct CorsairEvent {
+    pub(crate) id: CorsairEventId,
+    pub(crate) __bindgen_anon_1: CorsairEvent__bindgen_ty_1,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub union CorsairEvent__bindgen_ty_1 {
-    pub deviceConnectionStatusChangedEvent: *const CorsairDeviceConnectionStatusChangedEvent,
-    pub keyEvent: *const CorsairKeyEvent,
+pub(crate) union CorsairEvent__bindgen_ty_1 {
+    pub(crate) deviceConnectionStatusChangedEvent: *const CorsairDeviceConnectionStatusChangedEvent,
+    pub(crate) keyEvent: *const CorsairKeyEvent,
 }
 #[test]
 fn bindgen_test_layout_CorsairEvent__bindgen_ty_1() {
@@ -636,9 +635,9 @@ fn bindgen_test_layout_CorsairEvent() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairDataType_BooleanArray {
-    pub items: *mut bool,
-    pub count: ::std::os::raw::c_uint,
+pub(crate) struct CorsairDataType_BooleanArray {
+    pub(crate) items: *mut bool,
+    pub(crate) count: ::std::os::raw::c_uint,
 }
 #[test]
 fn bindgen_test_layout_CorsairDataType_BooleanArray() {
@@ -678,9 +677,9 @@ fn bindgen_test_layout_CorsairDataType_BooleanArray() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairDataType_Int32Array {
-    pub items: *mut ::std::os::raw::c_int,
-    pub count: ::std::os::raw::c_uint,
+pub(crate) struct CorsairDataType_Int32Array {
+    pub(crate) items: *mut ::std::os::raw::c_int,
+    pub(crate) count: ::std::os::raw::c_uint,
 }
 #[test]
 fn bindgen_test_layout_CorsairDataType_Int32Array() {
@@ -720,9 +719,9 @@ fn bindgen_test_layout_CorsairDataType_Int32Array() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairDataType_Float64Array {
-    pub items: *mut f64,
-    pub count: ::std::os::raw::c_uint,
+pub(crate) struct CorsairDataType_Float64Array {
+    pub(crate) items: *mut f64,
+    pub(crate) count: ::std::os::raw::c_uint,
 }
 #[test]
 fn bindgen_test_layout_CorsairDataType_Float64Array() {
@@ -762,9 +761,9 @@ fn bindgen_test_layout_CorsairDataType_Float64Array() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairDataType_StringArray {
-    pub items: *mut *mut ::std::os::raw::c_char,
-    pub count: ::std::os::raw::c_uint,
+pub(crate) struct CorsairDataType_StringArray {
+    pub(crate) items: *mut *mut ::std::os::raw::c_char,
+    pub(crate) count: ::std::os::raw::c_uint,
 }
 #[test]
 fn bindgen_test_layout_CorsairDataType_StringArray() {
@@ -804,15 +803,15 @@ fn bindgen_test_layout_CorsairDataType_StringArray() {
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub union CorsairDataValue {
-    pub boolean: bool,
-    pub int32: ::std::os::raw::c_int,
-    pub float64: f64,
-    pub string: *mut ::std::os::raw::c_char,
-    pub boolean_array: CorsairDataType_BooleanArray,
-    pub int32_array: CorsairDataType_Int32Array,
-    pub float64_array: CorsairDataType_Float64Array,
-    pub string_array: CorsairDataType_StringArray,
+pub(crate) union CorsairDataValue {
+    pub(crate) boolean: bool,
+    pub(crate) int32: ::std::os::raw::c_int,
+    pub(crate) float64: f64,
+    pub(crate) string: *mut ::std::os::raw::c_char,
+    pub(crate) boolean_array: CorsairDataType_BooleanArray,
+    pub(crate) int32_array: CorsairDataType_Int32Array,
+    pub(crate) float64_array: CorsairDataType_Float64Array,
+    pub(crate) string_array: CorsairDataType_StringArray,
 }
 #[test]
 fn bindgen_test_layout_CorsairDataValue() {
@@ -911,9 +910,9 @@ fn bindgen_test_layout_CorsairDataValue() {
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct CorsairProperty {
-    pub type_: CorsairDataType,
-    pub value: CorsairDataValue,
+pub(crate) struct CorsairProperty {
+    pub(crate) type_: CorsairDataType,
+    pub(crate) value: CorsairDataValue,
 }
 #[test]
 fn bindgen_test_layout_CorsairProperty() {
@@ -952,12 +951,12 @@ fn bindgen_test_layout_CorsairProperty() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairLedColor {
-    pub id: CorsairLedLuid,
-    pub r: ::std::os::raw::c_uchar,
-    pub g: ::std::os::raw::c_uchar,
-    pub b: ::std::os::raw::c_uchar,
-    pub a: ::std::os::raw::c_uchar,
+pub(crate) struct CorsairLedColor {
+    pub(crate) id: CorsairLedLuid,
+    pub(crate) r: ::std::os::raw::c_uchar,
+    pub(crate) g: ::std::os::raw::c_uchar,
+    pub(crate) b: ::std::os::raw::c_uchar,
+    pub(crate) a: ::std::os::raw::c_uchar,
 }
 #[test]
 fn bindgen_test_layout_CorsairLedColor() {
@@ -1026,9 +1025,9 @@ fn bindgen_test_layout_CorsairLedColor() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CorsairKeyEventConfiguration {
-    pub keyId: CorsairMacroKeyId,
-    pub isIntercepted: bool,
+pub(crate) struct CorsairKeyEventConfiguration {
+    pub(crate) keyId: CorsairMacroKeyId,
+    pub(crate) isIntercepted: bool,
 }
 #[test]
 fn bindgen_test_layout_CorsairKeyEventConfiguration() {
@@ -1066,16 +1065,16 @@ fn bindgen_test_layout_CorsairKeyEventConfiguration() {
         )
     );
 }
-pub type CorsairSessionStateChangedHandler = ::std::option::Option<
+pub(crate) type CorsairSessionStateChangedHandler = ::std::option::Option<
     unsafe extern "C" fn(
         context: *mut ::std::os::raw::c_void,
         eventData: *const CorsairSessionStateChanged,
     ),
 >;
-pub type CorsairAsyncCallback = ::std::option::Option<
+pub(crate) type CorsairAsyncCallback = ::std::option::Option<
     unsafe extern "C" fn(context: *mut ::std::os::raw::c_void, error: CorsairError),
 >;
-pub type CorsairEventHandler = ::std::option::Option<
+pub(crate) type CorsairEventHandler = ::std::option::Option<
     unsafe extern "C" fn(context: *mut ::std::os::raw::c_void, event: *const CorsairEvent),
 >;
 extern "C" {
@@ -1087,11 +1086,11 @@ extern "C" {
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairGetSessionDetails(details: *mut CorsairSessionDetails) -> CorsairError;
+    pub(crate) fn CorsairGetSessionDetails(details: *mut CorsairSessionDetails) -> CorsairError;
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairDisconnect() -> CorsairError;
+    pub(crate) fn CorsairDisconnect() -> CorsairError;
 }
 extern "C" {
     #[must_use]
@@ -1104,7 +1103,7 @@ extern "C" {
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairGetDeviceInfo(
+    pub(crate) fn CorsairGetDeviceInfo(
         deviceId: *mut ::std::os::raw::c_char,
         deviceInfo: *mut CorsairDeviceInfo,
     ) -> CorsairError;
@@ -1120,25 +1119,25 @@ extern "C" {
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairSubscribeForEvents(
+    pub(crate) fn CorsairSubscribeForEvents(
         onEvent: CorsairEventHandler,
         context: *mut ::std::os::raw::c_void,
     ) -> CorsairError;
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairUnsubscribeFromEvents() -> CorsairError;
+    pub(crate) fn CorsairUnsubscribeFromEvents() -> CorsairError;
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairConfigureKeyEvent(
+    pub(crate) fn CorsairConfigureKeyEvent(
         deviceId: *mut ::std::os::raw::c_char,
         config: *const CorsairKeyEventConfiguration,
     ) -> CorsairError;
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairGetDevicePropertyInfo(
+    pub(crate) fn CorsairGetDevicePropertyInfo(
         deviceId: *mut ::std::os::raw::c_char,
         propertyId: CorsairDevicePropertyId,
         index: ::std::os::raw::c_uint,
@@ -1148,7 +1147,7 @@ extern "C" {
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairReadDeviceProperty(
+    pub(crate) fn CorsairReadDeviceProperty(
         deviceId: *mut ::std::os::raw::c_char,
         propertyId: CorsairDevicePropertyId,
         index: ::std::os::raw::c_uint,
@@ -1157,7 +1156,7 @@ extern "C" {
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairWriteDeviceProperty(
+    pub(crate) fn CorsairWriteDeviceProperty(
         deviceId: *mut ::std::os::raw::c_char,
         propertyId: CorsairDevicePropertyId,
         index: ::std::os::raw::c_uint,
@@ -1166,7 +1165,7 @@ extern "C" {
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairFreeProperty(property: *mut CorsairProperty) -> CorsairError;
+    pub(crate) fn CorsairFreeProperty(property: *mut CorsairProperty) -> CorsairError;
 }
 extern "C" {
     #[must_use]
@@ -1178,7 +1177,7 @@ extern "C" {
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairSetLedColorsBuffer(
+    pub(crate) fn CorsairSetLedColorsBuffer(
         deviceId: *mut ::std::os::raw::c_char,
         size: ::std::os::raw::c_int,
         ledColors: *const CorsairLedColor,
@@ -1186,14 +1185,14 @@ extern "C" {
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairSetLedColorsFlushBufferAsync(
+    pub(crate) fn CorsairSetLedColorsFlushBufferAsync(
         callback: CorsairAsyncCallback,
         context: *mut ::std::os::raw::c_void,
     ) -> CorsairError;
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairGetLedColors(
+    pub(crate) fn CorsairGetLedColors(
         deviceId: *mut ::std::os::raw::c_char,
         size: ::std::os::raw::c_int,
         ledColors: *mut CorsairLedColor,
@@ -1201,11 +1200,11 @@ extern "C" {
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairSetLayerPriority(priority: ::std::os::raw::c_uint) -> CorsairError;
+    pub(crate) fn CorsairSetLayerPriority(priority: ::std::os::raw::c_uint) -> CorsairError;
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairGetLedLuidForKeyName(
+    pub(crate) fn CorsairGetLedLuidForKeyName(
         deviceId: *mut ::std::os::raw::c_char,
         keyName: ::std::os::raw::c_char,
         ledId: *mut CorsairLedLuid,
@@ -1213,11 +1212,11 @@ extern "C" {
 }
 extern "C" {
     #[must_use]
-    pub fn CorsairRequestControl(
+    pub(crate) fn CorsairRequestControl(
         deviceId: *mut ::std::os::raw::c_char,
         accessLevel: CorsairAccessLevel,
     ) -> CorsairError;
 }
 extern "C" {
-    pub fn CorsairReleaseControl(deviceId: *mut ::std::os::raw::c_char) -> CorsairError;
+    pub(crate) fn CorsairReleaseControl(deviceId: *mut ::std::os::raw::c_char) -> CorsairError;
 }

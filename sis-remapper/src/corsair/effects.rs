@@ -1,5 +1,5 @@
 use cgmath::Angle;
-use icue_bindings::sys::CorsairLedColor;
+use icue_bindings::CorsairLedColor;
 use sis_core::{rgbau8_to_rgbaf32, ColorAnimation, ColorChangeAnimation, RGBAf32, RippleAnimation, WaveAnimation, RGBA};
 
 const LED_DISTANCE: f64 = 20.0;

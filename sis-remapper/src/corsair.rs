@@ -1,6 +1,6 @@
 use std::{ffi::CString, os::raw::c_void, sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
-use icue_bindings::{sys::{CorsairLedColor, CorsairLedPosition}, CorsairConnect, CorsairDeviceType, CorsairGetDevices, CorsairGetLedPositions, CorsairSessionState, CorsairSetLedColors};
+use icue_bindings::{CorsairLedColor, CorsairLedPosition, CorsairConnect, CorsairDeviceType, CorsairGetDevices, CorsairGetLedPositions, CorsairSessionState, CorsairSetLedColors};
 
 use self::effects::{clorled_to_floatled, floatled_to_colorled, ripple_effect, ripple_key, static_effect, static_key, wave_effect, wave_key, Effect, LedInfof32};
 
@@ -38,7 +38,7 @@ enum LedId {
 
 fn corsair_handler(
     state: CorsairSessionState,
-    details: icue_bindings::sys::CorsairSessionDetails,
+    details: icue_bindings::CorsairSessionDetails,
     tx: &Sender<CorsairMsg>
 ) {
     unsafe {
