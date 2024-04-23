@@ -1,11 +1,11 @@
 use cgmath::Angle;
-use icue_bindings::CorsairLedColor;
+use icue_bindings::types::{CorsairLedColor, CorsairLedLuid};
 use sis_core::{rgbau8_to_rgbaf32, ColorAnimation, ColorChangeAnimation, RGBAf32, RippleAnimation, WaveAnimation, RGBA};
 
 const LED_DISTANCE: f64 = 20.0;
 
 pub(crate) struct CorsairLedColorf32 {
-    pub id: u32,
+    pub id: CorsairLedLuid,
     color: RGBAf32
 }
 
