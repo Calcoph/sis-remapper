@@ -21,6 +21,7 @@ pub enum Keyword {
     Macro,
     Profile,
     ColorAnimation,
+    Loop,
 }
 
 /// Error containing a text span and an error message to display.

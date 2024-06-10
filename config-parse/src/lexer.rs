@@ -103,6 +103,7 @@ fn lexer<'a, 'b>(input: StrSpan<'a, 'b>) -> StrResult<StrSpan<'a, 'b>, Vec<TokSp
                 "color_animation" => Token::K(Keyword::ColorAnimation),
                 "profile" => Token::K(Keyword::Profile),
                 "macro" => Token::K(Keyword::Macro),
+                "loop" => Token::K(Keyword::Loop),
                 "true" => Token::Bool(true),
                 "false" => Token::Bool(false),
                 s => Token::Ident{ name: s },

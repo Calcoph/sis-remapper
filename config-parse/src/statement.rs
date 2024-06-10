@@ -2,12 +2,28 @@ use sis_core::{rgbau8_to_rgbaf32, RGBAf32};
 
 use crate::token::Spanned;
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub enum FuncName {
+    // Built in
+    SetHotkey,
+    PressKey,
+    ReleaseKey,
+    SwitchProfile,
+    WaveEffect,
+    RippleEffect,
+    StaticColor,
+
+    // User defined
+    Other(String),
+}
+
 pub enum Statement {
     Profile { name: String, body: Vec<Self> },
     Func { name: String, body: Vec<Self> },
-    Call{ name: Spanned<String>, args: Vec<Spanned<Value>> },
+    Call{ name: Spanned<FuncName>, args: Vec<Spanned<Value>> },
     Macro { name: String, body: Vec<Self> },
     ColorAnimation { name: String, body: Vec<Spanned<Keyframe>> },
+    Loop { body: Vec<Self> }
 }
 
 pub(crate) struct Keyframe {

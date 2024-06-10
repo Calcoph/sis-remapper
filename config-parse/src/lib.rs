@@ -2,8 +2,8 @@ use std::{cell::RefCell, collections::HashMap, time::Duration};
 
 use cgmath::Deg;
 use parser::token_parse;
-use sis_core::{ColorAnimation, HotkeySlot, RippleAnimation, VirtualKey, WaveAnimation};
-use statement::{Color, Statement, Value};
+use sis_core::{ColorAnimation, RippleAnimation, VirtualKey, WaveAnimation};
+use statement::{Color, FuncName, Statement, Value};
 use token::{Spanned, Token};
 
 mod lexer;
@@ -43,25 +43,25 @@ pub fn get_config() -> Config {
             } => {
                 let profile_actions = get_calls(body);
                 if let Some(_) = profiles.insert(name.clone(), profile_actions) {
-                    eprint!("Redefinition of profile {name}");
+                    eprintln!("Redefinition of profile {name}");
                     break;
                 };
             },
             Statement::Func { name, body } => {
                 let func_actions = get_calls(body);
                 if let Some(_) = functions.insert(name.clone(), MaybeExpanded::NotExpanded(func_actions)) {
-                    eprint!("Redefinition of function {name}");
+                    eprintln!("Redefinition of function {name}");
                     break;
                 }
             },
             Statement::Call { .. } => {
-                eprint!("Invalid AST");
+                eprintln!("Invalid AST");
                 break;
             },
             Statement::Macro { name, body } => {
                 let macro_actions = get_calls(body);
                 if let Some(_) = macros.insert(name.clone(), macro_actions) {
-                    eprint!("Redefinition of macro {name}");
+                    eprintln!("Redefinition of macro {name}");
                     break;
                 }
             },
@@ -78,6 +78,10 @@ pub fn get_config() -> Config {
                     break;
                 }
             },
+            Statement::Loop { .. } => {
+                eprintln!("Invalid AST");
+                break;
+            },
         }
     }
 
@@ -90,12 +94,19 @@ pub fn get_config() -> Config {
                 MaybeExpanded::NotExpanded(_) => panic!("WTF"),
             };
 
-            (name, actions)
+            (FuncName::Other(name), actions)
         }).collect();
 
     let mut expanded_macros = Vec::new();
     for (macro_name, profile_actions) in macros {
-        let actions = create_macro(macro_name, profile_actions, &profile_names).unwrap();
+        let Calls {
+            loop_,
+            one_time,
+        } = profile_actions;
+        if loop_.len() > 1 {
+            eprintln!("Cannot have loops inside macros. All statements inside the loop will be ignored.")
+        }
+        let actions = create_macro(macro_name, one_time, &profile_names).unwrap();
         expanded_macros.push(actions)
     }
 
@@ -114,21 +125,34 @@ pub fn get_config() -> Config {
 
 pub struct Profile {
     pub name: String,
-    pub actions: Vec<Action>
+    pub one_time_actions: Vec<Action>,
+    pub loop_actions: Vec<Action>
 }
 
-fn create_profile(profile_name: String, profile_actions: Vec<(Spanned<String>, Vec<Spanned<Value>>)>, functions: &HashMap<String, Vec<Action>>, animations: &HashMap<String, ColorAnimation>) -> Result<Profile, ()> {
+fn create_profile(profile_name: String, profile_actions: Calls, functions: &HashMap<FuncName, Actions>, animations: &HashMap<String, ColorAnimation>) -> Result<Profile, ()> {
     let mut actions = Vec::new();
-    for ((action_name, _), args) in profile_actions {
+    let mut loop_ = Vec::new();
+    for (in_loop, ((action_name, _), args)) in profile_actions.loop_.into_iter().map(|a| (true, a)).chain(profile_actions.one_time.into_iter().map(|a| (false, a))) {
         match get_action(&action_name, &args, animations)? {
-            Some(action) => actions.push(action),
+            Some(action) => {
+                if in_loop {
+                    loop_.push(action)
+                } else {
+                    actions.push(action)
+                }
+            },
             None => {
                 if args.len() != 0 {
                     return Err(())
                 }
                 let function = functions.get(&action_name);
                 if let Some(function) = function {
-                    actions.extend(function.iter().map(|a| a.clone()))
+                    let Actions {
+                        loop_: l,
+                        one_time: ot
+                    } = function;
+                    actions.extend(ot.iter().map(|a| a.clone()));
+                    loop_.extend(l.iter().map(|a| a.clone()));
                 } else {
                     return Err(());
                 }
@@ -136,7 +160,7 @@ fn create_profile(profile_name: String, profile_actions: Vec<(Spanned<String>, V
         }
     }
 
-    Ok(Profile{ name: profile_name, actions })
+    Ok(Profile{ name: profile_name, one_time_actions: actions, loop_actions: loop_ })
 }
 
 pub struct Macro {
@@ -144,33 +168,22 @@ pub struct Macro {
     pub actions: Vec<Action>
 }
 
-fn create_macro(macro_name: String, profile_actions: Vec<(Spanned<String>, Vec<Spanned<Value>>)>, profile_names: &[&str]) -> Result<Macro, ()> {
+fn create_macro(macro_name: String, profile_actions: Vec<(Spanned<FuncName>, Vec<Spanned<Value>>)>, profile_names: &[&str]) -> Result<Macro, ()> {
     let mut actions = Vec::new();
     for ((action_name, _), args) in profile_actions {
-        match action_name.as_str() {
-            "set_hotkey" => {
-                return Err(())
-            }
-            "press_key" => {
+        match action_name {
+            FuncName::SetHotkey => todo!(),
+            FuncName::PressKey => {
                 let press_key_action = get_press_key_action(&args)?;
                 actions.push(press_key_action);
             },
-            "release_key" => {
+            FuncName::ReleaseKey => {
                 let release_key_action = get_release_key_action(&args)?;
                 actions.push(release_key_action);
             },
-            "switch_profile" => {
+            FuncName::SwitchProfile => {
                 let switch_profile_action = get_switch_profile_action(&args, profile_names)?;
                 actions.push(switch_profile_action);
-            }
-            "wave_effect" => {
-                return Err(())
-            },
-            "ripple_effect" => {
-                return Err(())
-            },
-            "static_color" => {
-                return Err(())
             },
             _ => return Err(())
         }
@@ -179,11 +192,27 @@ fn create_macro(macro_name: String, profile_actions: Vec<(Spanned<String>, Vec<S
     Ok(Macro{ name: macro_name, actions })
 }
 
-fn get_calls(body: Vec<Statement>) -> Vec<(Spanned<String>, Vec<Spanned<Value>>)> {
+struct Calls {
+    loop_: Vec<(Spanned<FuncName>, Vec<Spanned<Value>>)>,
+    one_time: Vec<(Spanned<FuncName>, Vec<Spanned<Value>>)>
+}
+
+fn get_calls(body: Vec<Statement>) -> Calls {
     let mut func_calls = Vec::new();
+    let mut loop_ = Vec::new();
     for statement in body {
         match statement {
             Statement::Call { name, args } => func_calls.push((name, args)),
+            Statement::Loop { body } => {
+                let Calls {
+                    loop_: l,
+                    one_time: funcs,
+                } = get_calls(body);
+                if l.len() > 1 {
+                    eprintln!("Cannot have nested loops. Statements inside the nested loops will be ignored.")
+                }
+                loop_.extend(funcs.into_iter());
+            },
             Statement::Profile { .. } => unreachable!(),
             Statement::Func { .. } => unreachable!(),
             Statement::Macro { .. } => unreachable!(),
@@ -191,7 +220,10 @@ fn get_calls(body: Vec<Statement>) -> Vec<(Spanned<String>, Vec<Spanned<Value>>)
         }
     }
 
-    func_calls
+    Calls {
+        loop_,
+        one_time: func_calls,
+    }
 }
 
 fn expand_functions(functions_ptr: *mut HashMap<String, MaybeExpanded>, call_stack: &mut Vec<String>, animations: &HashMap<String, ColorAnimation>, profile_names: &Vec<&str>) -> Result<(), ()> {
@@ -199,39 +231,31 @@ fn expand_functions(functions_ptr: *mut HashMap<String, MaybeExpanded>, call_sta
         functions_ptr.as_mut().unwrap()
     };
 
-    let reserved_function_names = vec![
-        "set_hotkey",
-        "press_key",
-        "release_key",
-        "switch_profile",
-        "wave_effect",
-        "ripple_effect",
-        "static_color",
-    ];
-
     for (function_name, function_actions) in functions.iter_mut() {
-        if reserved_function_names.contains(&function_name.as_str()) {
-            return Err(())
-        } else {
-            if let MaybeExpanded::NotExpanded(not_expanded_function_actions) = function_actions {
-                *function_actions = MaybeExpanded::Expanded(expand_function(functions_ptr, call_stack, function_name.clone(), &not_expanded_function_actions, animations, profile_names).unwrap());
-            } else if let MaybeExpanded::Expanded(_) = function_actions {
-                // Do nothing, it is already expanded
-            }
+        if let MaybeExpanded::NotExpanded(not_expanded_function_actions) = function_actions {
+            *function_actions = MaybeExpanded::Expanded(expand_function(functions_ptr, call_stack, function_name.clone(), &not_expanded_function_actions, animations, profile_names).unwrap());
+        } else if let MaybeExpanded::Expanded(_) = function_actions {
+            // Do nothing, it is already expanded
         }
     }
 
     Ok(())
 }
 
+#[derive(Debug, Clone)]
+struct Actions {
+    loop_: Vec<Action>,
+    one_time: Vec<Action>
+}
+
 fn expand_function(
     functions_ptr: *mut HashMap<String, MaybeExpanded>,
     call_stack: &mut Vec<String>,
     function_name: String,
-    function_actions: &[(Spanned<String>, Vec<Spanned<Value>>)],
+    function_actions: &Calls,
     animations: &HashMap<String, ColorAnimation>,
     profile_names: &[&str]
-) -> Result<Vec<Action>, ()> {
+) -> Result<Actions, ()> {
     let functions = unsafe{
         functions_ptr.as_mut().unwrap()
     };
@@ -240,24 +264,50 @@ fn expand_function(
     }
     call_stack.push(function_name.clone());
 
-    let mut actions = Vec::new();
+    let Calls {
+        loop_: l,
+        one_time: ot
+    } = function_actions;
 
-    for ((action_name, _), args) in function_actions {
+    let mut actions = Vec::new();
+    let mut loop_ = Vec::new();
+
+    for (in_loop, ((action_name, _), args)) in l.iter().map(|a| (true, a)).chain(ot.iter().map(|a| (false, a))) {
         match get_action(action_name, &args, animations) {
-            Ok(Some(action)) => actions.push(action),
+            Ok(Some(action)) => {
+                if in_loop {
+                    loop_.push(action)
+                } else {
+                    actions.push(action)
+                }
+            },
             Ok(None) => {
+                let action_name = match action_name {
+                    FuncName::Other(name) => name,
+                    _ => panic!("Not possible?")
+                };
                 let function = functions.get_mut(action_name);
                 if let Some(function) = function {
                     if let MaybeExpanded::NotExpanded(not_expanded_function) = function {
                         if let Ok(acts) = expand_function(functions_ptr, call_stack, action_name.clone(), not_expanded_function, animations, profile_names) {
                             *function = MaybeExpanded::Expanded(acts.clone());
-                            actions.extend(acts)
+                            let Actions {
+                                loop_: l,
+                                one_time: ot
+                            } = acts;
+                            actions.extend(ot.into_iter());
+                            loop_.extend(l.into_iter());
                         } else {
                             call_stack.pop();
                             return Err(())
                         }
                     } else if let MaybeExpanded::Expanded(function) = function {
-                        actions.extend(function.iter().map(|a| a.to_owned()))
+                        let Actions {
+                            loop_: l,
+                            one_time: ot,
+                        } = function;
+                        actions.extend(ot.iter().map(|a| a.to_owned()));
+                        loop_.extend(l.iter().map(|a| a.to_owned()));
                     }
                 } else {
                     call_stack.pop();
@@ -272,33 +322,24 @@ fn expand_function(
     }
 
     call_stack.pop();
-    Ok(actions)
+    Ok(Actions {
+        loop_,
+        one_time: actions,
+    })
 }
 
-fn get_action(action_name: &str, args: &[Spanned<Value>], animations: &HashMap<String, ColorAnimation>) -> Result<Option<Action>, ()> {
+fn get_action(action_name: &FuncName, args: &[Spanned<Value>], animations: &HashMap<String, ColorAnimation>) -> Result<Option<Action>, ()> {
     Ok(match action_name {
-        "set_hotkey" => {
+        FuncName::SetHotkey => {
             Some(get_hotkey_action(args)?)
-        }
-        "press_key" => {
-            return Err(())
         },
-        "release_key" => {
-            return Err(())
-        },
-        "switch_profile" => {
-            return Err(())
-        }
-        "wave_effect" => {
-            Some(get_wave_effect_action(args, animations)?)
-        },
-        "ripple_effect" => {
-            Some(get_ripple_effect_action(args, animations)?)
-        },
-        "static_color" => {
-            Some(get_static_color_action(args)?)
-        },
-        _ => None
+        FuncName::PressKey => return Err(()),
+        FuncName::ReleaseKey => return Err(()),
+        FuncName::SwitchProfile => return Err(()),
+        FuncName::WaveEffect => Some(get_wave_effect_action(args, animations)?),
+        FuncName::RippleEffect => Some(get_ripple_effect_action(args, animations)?),
+        FuncName::StaticColor => Some(get_static_color_action(args)?),
+        FuncName::Other(_) => None,
     })
 }
 
@@ -419,7 +460,7 @@ fn get_press_key_action(args: &[Spanned<Value>]) -> Result<Action, ()> {
     }
     let key = if let (Value::EnumVariant { enum_name, variant }, _) = args.get(0).unwrap() {
         if enum_name == "Key" {
-            let key: VirtualKey = match  variant.to_owned().try_into() {
+            let key: VirtualKey = match variant.as_str().try_into() {
                 Ok(key) => key,
                 Err(_) => return Err(()),
             };
@@ -440,7 +481,7 @@ fn get_release_key_action(args: &[Spanned<Value>]) -> Result<Action, ()> {
     }
     let key = if let (Value::EnumVariant { enum_name, variant }, _) = args.get(0).unwrap() {
         if enum_name == "Key" {
-            let key: VirtualKey = match  variant.to_owned().try_into() {
+            let key: VirtualKey = match variant.as_str().try_into() {
                 Ok(key) => key,
                 Err(_) => return Err(()),
             };
@@ -459,22 +500,11 @@ fn get_hotkey_action(args: &[Spanned<Value>]) -> Result<Action, ()> {
     if !args.len() == 2 {
         return Err(());
     }
-    let slot = if let (Value::EnumVariant { enum_name, variant }, _) = args.get(0).unwrap() {
+    let slot: VirtualKey = if let (Value::EnumVariant { enum_name, variant }, _) = args.get(0).unwrap() {
         if enum_name == "Key" {
-            match variant.as_str() {
-                "F13" => HotkeySlot::S1,
-                "F14" => HotkeySlot::S2,
-                "F15" => HotkeySlot::S3,
-                "F16" => HotkeySlot::S4,
-                "F17" => HotkeySlot::S5,
-                "F18" => HotkeySlot::S6,
-                "F19" => HotkeySlot::S7,
-                "F20" => HotkeySlot::S8,
-                "F21" => HotkeySlot::S9,
-                "F22" => HotkeySlot::S10,
-                "F23" => HotkeySlot::S11,
-                "F24" => HotkeySlot::S12,
-                _ => return Err(())
+            match variant.as_str().try_into() {
+                Ok(key) => key,
+                Err(_) => return Err(()),
             }
         } else {
             return Err(())
@@ -494,7 +524,7 @@ fn get_hotkey_action(args: &[Spanned<Value>]) -> Result<Action, ()> {
 #[derive(Debug, Clone)]
 pub enum Action {
     SetHotkey {
-        slot: HotkeySlot,
+        slot: VirtualKey,
         macro_name: String
     },
     ReleaseKey(VirtualKey),
@@ -506,6 +536,6 @@ pub enum Action {
 }
 
 enum MaybeExpanded {
-    Expanded(Vec<Action>),
-    NotExpanded(Vec<(Spanned<String>, Vec<Spanned<Value>>)>)
+    Expanded(Actions),
+    NotExpanded(Calls)
 }

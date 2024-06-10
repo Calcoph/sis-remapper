@@ -3,7 +3,7 @@ use std::{io::ErrorKind, ops::Range};
 use nom::{branch::alt, bytes::complete::{tag, take}, combinator::{eof, map, map_res}, multi::{many0, many_till, separated_list0}, sequence::{delimited, pair, preceded, separated_pair}, InputTake};
 use nom_supreme::{error::{BaseErrorKind, ErrorTree, GenericErrorTree}, ParserExt};
 
-use crate::{combinators::{map_with_span, spanned}, statement::{Color, Keyframe, Statement, Value}, token::{Keyword, Spanned, ToRange, TokError, TokResult, TokSpan, Token, Tokens}};
+use crate::{combinators::{map_with_span, spanned}, statement::{Color, FuncName, Keyframe, Statement, Value}, token::{Keyword, Spanned, ToRange, TokError, TokResult, TokSpan, Token, Tokens}};
 
 pub(crate) fn ident<'a, 'b>(input: Tokens<'a, 'b>) -> TokResult<'a, 'b, Spanned<String>> {
     map_res(
@@ -99,10 +99,27 @@ fn value<'a, 'b>(input: Tokens<'a, 'b>) -> TokResult<'a, 'b, Spanned<Value>> {
     ))(input)
 }
 
+pub(crate) fn func_name<'a, 'b>(input: Tokens<'a, 'b>) -> TokResult<'a, 'b, Spanned<FuncName>> {
+    map(
+        ident,
+        |(name, span)| {
+            (match name.as_str() {
+                "set_hotkey" => FuncName::SetHotkey,
+                "press_key" => FuncName::PressKey,
+                "release_key" => FuncName::ReleaseKey,
+                "switch_profile" => FuncName::SwitchProfile,
+                "wave_effect" => FuncName::WaveEffect,
+                "ripple_effect" => FuncName::RippleEffect,
+                "static_color" => FuncName::StaticColor,
+                _ => FuncName::Other(name)
+            }, span)
+    })(input)
+}
+
 fn function_call<'a, 'b>(input: Tokens<'a, 'b>) -> TokResult<'a, 'b, Spanned<Statement>> {
     map_with_span(
     pair(
-            ident,
+            func_name,
             delimited(
                 Token::Separator('('),
                 separated_list0(
@@ -121,9 +138,29 @@ fn function_call<'a, 'b>(input: Tokens<'a, 'b>) -> TokResult<'a, 'b, Spanned<Sta
     )(input)
 }
 
+fn loop_block<'a, 'b>(input: Tokens<'a, 'b>) -> TokResult<'a, 'b, Spanned<Statement>> {
+    map_with_span(
+    preceded(
+            Token::K(Keyword::Loop),
+            delimited(
+                Token::Separator('{'),
+                many0(function_call),
+                Token::Separator('}')
+            )
+        ),
+        |calls, span| {
+            (
+                Statement::Loop { body: calls.into_iter().map(|(s, _)| s).collect() },
+                span
+            )
+        }
+    )(input)
+}
+
 pub(crate) fn statement<'a, 'b>(input: Tokens<'a, 'b>) -> TokResult<'a, 'b, Spanned<Statement>> {
     alt((
         function_call,
+        loop_block,
     ))(input)
 }
 
@@ -150,12 +187,29 @@ pub(crate) fn profile_definition<'a, 'b>(input: Tokens<'a, 'b>) -> TokResult<'a,
     )(input)
 }
 
+pub(crate) fn custom_func_name<'a, 'b>(input: Tokens<'a, 'b>) -> TokResult<'a, 'b, Spanned<String>> {
+    map_res(
+        func_name,
+        |(name, span)| {
+            let name = match name {
+                FuncName::Other(name) => name,
+                _ => return Err(ErrorTree::Base {
+                    location: input.take(1),
+                    kind: BaseErrorKind::External(Box::new(tokio::io::Error::new(ErrorKind::Other, "Expected float")))
+                })
+            };
+
+            Ok((name, span))
+        }
+    )(input)
+}
+
 pub(crate) fn function_definition<'a, 'b>(input: Tokens<'a, 'b>) -> TokResult<'a, 'b, Spanned<Statement>> {
     map_with_span(
         preceded(
             Token::K(Keyword::Fn),
             pair(
-                ident.context("Expected function name"),
+                custom_func_name.context("Expected function name"),
                 delimited(
                     tag(Token::Separator('{')).context("Missing {"),
                     spanned(many0(statement)),

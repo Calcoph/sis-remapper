@@ -276,12 +276,13 @@ impl VirtualKey {
     }
 }
 
+#[derive(Debug)]
 pub struct ParseError;
 
-impl TryFrom<String> for VirtualKey {
+impl TryFrom<&str> for VirtualKey {
     type Error = ParseError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         use VirtualKey as VK;
         Ok(match value.to_lowercase().as_str() {
             "a" => VK::A,
@@ -323,60 +324,32 @@ impl TryFrom<String> for VirtualKey {
             "ctrl" => VK::Control,
             "alt" => VK::Alt,
             "shift" => VK::Shift,
+            "f1" => VK::F1,
+            "f2" => VK::F2,
+            "f3" => VK::F3,
+            "f4" => VK::F4,
+            "f5" => VK::F5,
+            "f6" => VK::F6,
+            "f7" => VK::F7,
+            "f8" => VK::F8,
+            "f9" => VK::F9,
+            "f10" => VK::F10,
+            "f11" => VK::F11,
+            "f12" => VK::F12,
+            "f13" => VK::F13,
+            "f14" => VK::F14,
+            "f15" => VK::F15,
+            "f16" => VK::F16,
+            "f17" => VK::F17,
+            "f18" => VK::F18,
+            "f19" => VK::F19,
+            "f20" => VK::F20,
+            "f21" => VK::F21,
+            "f22" => VK::F22,
+            "f23" => VK::F23,
+            "f24" => VK::F24,
             _ => return Err(ParseError),
         })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum HotkeySlot {
-    S1,
-    S2,
-    S3,
-    S4,
-    S5,
-    S6,
-    S7,
-    S8,
-    S9,
-    S10,
-    S11,
-    S12,
-}
-
-impl HotkeySlot {
-    pub fn to_vkey(&self) -> u32 {
-        match self {
-            HotkeySlot::S1 => VK_F13.0 as u32,
-            HotkeySlot::S2 => VK_F14.0 as u32,
-            HotkeySlot::S3 => VK_F15.0 as u32,
-            HotkeySlot::S4 => VK_F16.0 as u32,
-            HotkeySlot::S5 => VK_F17.0 as u32,
-            HotkeySlot::S6 => VK_F18.0 as u32,
-            HotkeySlot::S7 => VK_F19.0 as u32,
-            HotkeySlot::S8 => VK_F20.0 as u32,
-            HotkeySlot::S9 => VK_F21.0 as u32,
-            HotkeySlot::S10 => VK_F22.0 as u32,
-            HotkeySlot::S11 => VK_F23.0 as u32,
-            HotkeySlot::S12 => VK_F24.0 as u32,
-        }
-    }
-
-    pub fn to_id(&self) -> i32 {
-        match self {
-            HotkeySlot::S1 => 1,
-            HotkeySlot::S2 => 2,
-            HotkeySlot::S3 => 3,
-            HotkeySlot::S4 => 4,
-            HotkeySlot::S5 => 5,
-            HotkeySlot::S6 => 6,
-            HotkeySlot::S7 => 7,
-            HotkeySlot::S8 => 8,
-            HotkeySlot::S9 => 9,
-            HotkeySlot::S10 => 10,
-            HotkeySlot::S11 => 11,
-            HotkeySlot::S12 => 12,
-        }
     }
 }
 

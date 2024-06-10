@@ -1,7 +1,7 @@
-use std::sync::mpsc::{self, Sender};
+use std::{sync::mpsc::{self, Sender}, time::{Duration, Instant}};
 
 use config_parse::{get_config, Action, Config, Macro, Profile};
-use sis_core::{ColorAnimation, HotkeySlot};
+use sis_core::{ColorAnimation, VirtualKey};
 use windows::Win32::UI::Input::KeyboardAndMouse::*;
 
 use crate::{corsair::{effects::Effect, CorsairMsg}, hotkey_handler::keys::{Input, KeyDirection}};
@@ -12,8 +12,9 @@ mod keys;
 static mut HOTKEY_HANDLER: HotkeyHandler = HotkeyHandler::new();
 
 pub(crate) struct HotkeyHandler {
-    hotkeys: Vec<(HotkeySlot, Vec<INPUT>, Option<String>)>,
+    hotkeys: Vec<(VirtualKey, Vec<INPUT>, Option<String>)>,
     current_profile: String,
+    profile_start_time: Option<Instant>,
     corsair_sender: Option<Sender<CorsairMsg>>,
     profiles: Vec<Profile>,
     macros: Vec<Macro>,
@@ -25,6 +26,7 @@ impl HotkeyHandler {
         HotkeyHandler {
             hotkeys: Vec::new(),
             current_profile: String::new(),
+            profile_start_time: None,
             corsair_sender: None,
             profiles: Vec::new(),
             macros: Vec::new(),
@@ -52,10 +54,10 @@ impl HotkeyHandler {
         };
 
         for (hotkey, _, _) in hotkeys {
-            let hotkey_id = hotkey.to_id();
+            let hotkey_id = hotkey.to_vk().0 as i32;
             unsafe {
                 println!("Registering hotkey {}", hotkey_id);
-                if let Err(err) = RegisterHotKey(None, hotkey_id, HOT_KEY_MODIFIERS::default(), hotkey.to_vkey()) {
+                if let Err(err) = RegisterHotKey(None, hotkey_id, HOT_KEY_MODIFIERS::default(), hotkey.to_vk().0 as u32) {
                     panic!("Error registering hotkey {}: {}", hotkey_id, err)
                 };
             }
@@ -71,7 +73,7 @@ impl HotkeyHandler {
             &HOTKEY_HANDLER.hotkeys
         };
         for (hotkey, _, _) in hotkeys {
-            let hotkey_id = hotkey.to_id();
+            let hotkey_id = hotkey.to_vk().0 as i32;
             println!("Unregistering {hotkey_id}");
             unsafe {
                 if let Err(err) = UnregisterHotKey(None, hotkey_id) {
@@ -89,7 +91,7 @@ impl HotkeyHandler {
         };
 
         for (hotkey, inputs, after_profile) in hotkeys {
-            if hotkey.to_id() == id {
+            if hotkey.to_vk().0 as i32 == id {
                 let res = unsafe { SendInput(inputs, std::mem::size_of::<INPUT>() as i32) };
                 assert_eq!(inputs.len(), res as usize);
 
@@ -107,11 +109,13 @@ impl HotkeyHandler {
         let this = unsafe {
             &mut HOTKEY_HANDLER
         };
+        this.profile_start_time = Some(Instant::now());
         this.current_profile = profile;
         let mut actions = Vec::new();
         for profile in this.profiles.iter() {
             if profile.name == this.current_profile {
-                actions = profile.actions.clone();
+                // No need to access profile.loop_actions, since hotkeys cannot be set on loops or described by them
+                actions = profile.one_time_actions.clone();
                 break;
             }
         }
@@ -174,9 +178,17 @@ impl HotkeyHandler {
         };
 
         let mut actions = Vec::new();
+        let elapsed_since_profile_switch = this.profile_start_time.unwrap().elapsed();
         for profile in this.profiles.iter() {
             if profile.name == this.current_profile {
-                actions = profile.actions.clone();
+                actions = profile.one_time_actions.iter().filter(|action| {
+                    match action {
+                        Action::StaticColor(_) => true,
+                        Action::RippleEffect(effect) => effect.duration < elapsed_since_profile_switch,
+                        Action::WaveEffect(effect) => effect.duration < elapsed_since_profile_switch,
+                        _ => false, // not handled in this function
+                    }
+                }).chain(profile.loop_actions.iter()).cloned().collect();
                 break;
             }
         }
@@ -184,11 +196,10 @@ impl HotkeyHandler {
         let mut light_effects = Vec::new();
         for action in actions {
             match action {
-                Action::SetHotkey { .. } => (), // Not handled in this function
                 Action::StaticColor(color) => light_effects.push(Box::new(Effect::Static(color.into()))),
                 Action::RippleEffect(ripple) => light_effects.push(Box::new(Effect::Ripple(ripple))),
                 Action::WaveEffect(wave) => light_effects.push(Box::new(Effect::Wave(wave))),
-                _ => unimplemented!(),
+                _ => unreachable!(),
             }
         }
 
