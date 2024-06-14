@@ -1,8 +1,9 @@
-/// Exposes the private functions as public just for the purpose of testing
-use icue_bindings::{types::{CorsairLedColor, CorsairLedLuid}, CorsairConnect};
+use icue_bindings::types::{CorsairLedColor, CorsairLedLuid};
 use sis_core::{RGBAf32, RippleAnimation, WaveAnimation};
 
-use super::{corsair_connect, corsair_handler, effects::Effect, wait_connection, CorsairMsg, CorsairState};
+/// Exposes the private functions as public just for the purpose of testing
+use super::{corsair_connect, wait_connection, CorsairMsg, CorsairState};
+use crate::corsair::effects::Effect;
 
 pub enum PubEffect {
     Static(RGBAf32),

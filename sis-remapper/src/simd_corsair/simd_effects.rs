@@ -6,20 +6,40 @@ const LED_DISTANCE: f64 = 20.0;
 
 pub(crate) struct CorsairLedColorf32 {
     pub id: CorsairLedLuid,
-    pub(crate) color: RGBAf32
+    color: RGBAf32
+}
+
+struct SimdLeds {
+    positions: Vec<(f64, f64)>,
+    colors: Vec<SimdRGBLeds>,
+    ids: Vec<CorsairLedLuid>
+}
+
+
+#[repr(align(64))]
+struct SimdRGBLeds {
+    l1: [f32;3],
+    l2: [f32;3],
+    l3: [f32;3],
+    l4: [f32;3],
+    l5: [f32;3],
+    _pad: f32,
 }
 
 type LedInfo = ((f64, f64), CorsairLedColor);
 pub(crate) type LedInfof32 = ((f64, f64), CorsairLedColorf32);
 type Leds<'a> = Box<dyn Iterator<Item=LedInfo> + 'a>;
-pub(crate) type Ledsf32<'a> = Box<dyn Iterator<Item=LedInfof32> + 'a>;
+type Ledsf32<'a> = Box<dyn Iterator<Item=LedInfof32> + 'a>;
+type SimdLedsf32<'a> = Box<dyn Iterator<Item=LedInfof32> + 'a>;
 
-#[derive(Debug, Clone)]
-pub(crate) enum Effect {
-    Static(RGBAf32),
-    Wave(WaveAnimation),
-    Ripple(RippleAnimation),
-    ColorChange,
+pub(crate) fn clorled_to_floatled<'a>(leds: Leds<'a>) -> Ledsf32<'a> {
+    Box::new(leds.map(|(pos, CorsairLedColor { id, r, g, b, a })| {
+        let color = rgbau8_to_rgbaf32((r, g, b, a));
+        (pos, CorsairLedColorf32 {
+            id,
+            color
+        })
+    }))
 }
 
 pub(crate) fn floatled_to_colorled(leds: Ledsf32) -> Leds {
@@ -210,17 +230,41 @@ pub(super) fn rgbaf32_to_rgbau8(color: RGBAf32) -> RGBA {
     )
 }
 
-fn alpha_compose(under_color: RGBAf32, over_color: RGBAf32) -> RGBAf32 {
-    let (u_r, u_g, u_b, u_a) = under_color;
-    let (o_r, o_g, o_b, o_a) = over_color;
+#[repr(align(16))] // aligned to u128
+struct AlignedRGBA([f32;4]);
+
+fn alpha_compose(under_color: RGBAf32, mut over_color: RGBAf32) -> RGBAf32 {
+    use std::arch::x86_64::_mm_load1_ps as simd_set_f32;
+    use std::arch::x86_64::_mm_loadu_ps as simd_load_f32;
+    use std::arch::x86_64::_mm_add_ps as simd_add_f32;
+    use std::arch::x86_64::_mm_mul_ps as simd_mul_f32;
+    use std::arch::x86_64::_mm_store_ps as simd_recover_f32;
+
+    //let (u_r, u_g, u_b, u_a) = under_color;
+    //let (o_r, o_g, o_b, o_a) = over_color;
+    let u_a = under_color.3;
+    let o_a = over_color.3;
     let repr_o_a = 1.0 - o_a;
     let out_a = o_a + u_a * repr_o_a;
     let inv_out_a = 1.0 / out_a;
     let a_1 = o_a * inv_out_a;
     let a_2 = u_a * repr_o_a * inv_out_a;
-    let out_r = o_r * a_1 + u_r * a_2;
-    let out_g = o_g * a_1 + u_g * a_2;
-    let out_b = o_b * a_1 + u_b * a_2;
 
-    (out_r,out_g,out_b,out_a)
+    let u_rgb = &under_color;
+    let over_rgb = &mut over_color;
+    unsafe {
+        //rgb = o_rgb * a_1 + u_rgb * a_2
+        let u_rgb = simd_load_f32(&u_rgb.0);
+        let o_rgb = simd_load_f32(&over_rgb.0);
+        let a_1 = simd_set_f32(&a_1);
+        let a_2 = simd_set_f32(&a_2);
+        let m1 = simd_mul_f32(o_rgb, a_1);
+        let m2 = simd_mul_f32(u_rgb, a_2);
+
+        let out_rgb = simd_add_f32(m1, m2);
+        simd_recover_f32(&mut over_rgb.0, out_rgb)
+    }
+
+
+    (over_rgb.0,over_rgb.1,over_rgb.2,out_a)
 }
