@@ -148,7 +148,7 @@ impl CorsairState {
             }
         }
 
-        /* for (key, effect) in self.key_effects.iter() {
+        /* for (key, effect) in self.key_effects.iter() { // TODO: rewrite this part so it works. Cannot be easily done when mutating leds
             let effect: Box<dyn Fn(LedInfof32) -> LedInfof32> = match effect {
                 Effect::Static(color) => Box::new(move |key| static_key(key, color.clone())),
                 Effect::Wave(wave) => Box::new(move |key| wave_key(key, dt, wave)),
