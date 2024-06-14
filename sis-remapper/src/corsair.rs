@@ -117,9 +117,6 @@ impl CorsairState {
             let dt = self.start_time.elapsed().as_millis() as u64;
             //let nanos = self.start_time.elapsed().as_nanos() as u64;
             let leds = self.leds.iter()
-                .cloned()
-                .collect::<Vec<_>>()
-                .into_iter()
                 .map(|led| {
                     ((led.cx, led.cy), CorsairLedColor {
                         id: led.id,
