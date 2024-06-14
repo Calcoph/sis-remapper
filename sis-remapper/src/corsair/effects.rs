@@ -4,6 +4,7 @@ use sis_core::{rgbau8_to_rgbaf32, ColorAnimation, ColorChangeAnimation, RGBAf32,
 
 const LED_DISTANCE: f64 = 20.0;
 
+#[derive(Clone)]
 pub(crate) struct CorsairLedColorf32 {
     pub id: CorsairLedLuid,
     pub(crate) color: RGBAf32
@@ -22,11 +23,11 @@ pub(crate) enum Effect {
     ColorChange,
 }
 
-pub(crate) fn floatled_to_colorled(leds: Ledsf32) -> Leds {
-    Box::new(leds.map(|(pos, CorsairLedColorf32 { id, color })| {
+pub(crate) fn floatled_to_colorled(leds: &[LedInfof32]) -> Leds {
+    Box::new(leds.iter().map(|(pos, CorsairLedColorf32 { id, color })| {
         let (r,g,b,a) = rgbaf32_to_rgbau8(color);
-        (pos, CorsairLedColor {
-            id,
+        ((pos.0, pos.1), CorsairLedColor {
+            id: id.clone(),
             r,
             g,
             b,
@@ -35,98 +36,111 @@ pub(crate) fn floatled_to_colorled(leds: Ledsf32) -> Leds {
     }))
 }
 
-pub(crate) fn static_effect(leds: Ledsf32, effect_color: RGBAf32) -> Ledsf32 {
-    Box::new(leds.map(move |key| {
-        static_key(key, effect_color)
-    }))
+pub(crate) fn static_effect(leds: &mut [LedInfof32], effect_color: RGBAf32) {
+    for led in leds {
+        static_key(led, effect_color)
+    }
 }
 
-pub(crate) fn static_key((pos, CorsairLedColorf32 {id, color}): LedInfof32, effect_color: RGBAf32) -> LedInfof32 {
-    (pos, CorsairLedColorf32 {
-        id,
-        color: alpha_compose(color, effect_color)
-    })
+pub(crate) fn static_key((pos, CorsairLedColorf32 {id, color}): &mut LedInfof32, effect_color: RGBAf32) {
+    alpha_compose(color, effect_color)
 }
 
-pub(crate) fn wave_effect<'a>(leds: Ledsf32<'a>, dt_millis: u64, wave: &'a WaveAnimation) -> Ledsf32<'a> {
-    Box::new(leds.map(move |key| {
-        wave_key(key, dt_millis, wave)
-    }))
+struct WaveParams {
+    head: f64,
+    width: f64
 }
 
-pub(crate) fn wave_key((pos, CorsairLedColorf32 {id, color}): LedInfof32, dt_millis: u64, wave: &WaveAnimation) -> LedInfof32 {
-    const MIDPOINT: f64 = 100.0;
+fn wave_params(dt_millis: u64, wave: &WaveAnimation) -> WaveParams {
     let wave_head = (dt_millis % wave.duration.as_millis() as u64) as f64 * wave.speed / 1000.0 * LED_DISTANCE;
     let wave_width = wave.light_amount * LED_DISTANCE;
+
+    WaveParams {
+        head: wave_head,
+        width: wave_width
+    }
+}
+
+pub(crate) fn wave_effect<'a>(leds: &mut [LedInfof32], dt_millis: u64, wave: &'a WaveAnimation) {
+    let params = wave_params(dt_millis, wave);
+    for led in leds {
+        wave_led(led, dt_millis, wave, &params);
+    }
+}
+
+pub(crate) fn wave_key(key: &mut LedInfof32, dt_millis: u64, wave: &WaveAnimation) {
+    let params = wave_params(dt_millis, wave);
+    wave_led(key, dt_millis, wave, &params)
+}
+
+fn wave_led((pos, CorsairLedColorf32 {id, color}): &mut LedInfof32, dt_millis: u64, wave: &WaveAnimation, params: &WaveParams) {
+    const MIDPOINT: f64 = 100.0;
     let pos_rotated = pos.0 * wave.rotation.cos() as f64- pos.1 * wave.rotation.sin() as f64;
     let distance = if wave.two_sides {
-        wave_head - (pos_rotated - MIDPOINT).abs()
+        params.head - (pos_rotated - MIDPOINT).abs()
     } else {
-        wave_head - pos_rotated
+        params.head - pos_rotated
     };
-    if distance > 0.0 && distance < wave_width {
+    if distance > 0.0 && distance < params.width {
         // The key is inside the wave
-        let sample_point = (distance / wave_width) as f32;
+        let sample_point = (distance / params.width) as f32;
         let effect_color = sample_animation(sample_point, &wave.animation);
-        (pos, CorsairLedColorf32 {
-            id,
-            color: alpha_compose(color, effect_color)
-        })
-    } else {
-        // Don't do nothing
-        (pos, CorsairLedColorf32 {
-            id,
-            color
-        })
+        alpha_compose(color, effect_color);
     }
 }
 
-
-pub(crate) fn ripple_effect<'a>(leds: Ledsf32<'a>, dt_millis: u64, ripple: &'a RippleAnimation) -> Ledsf32<'a> {
-    Box::new(leds.map(move |key| {
-        ripple_key(key, dt_millis, ripple)
-    }))
+struct RippleParams {
+    head: f64,
+    width: f64
 }
 
-pub(crate) fn ripple_key((pos, CorsairLedColorf32 {id, color}): LedInfof32, dt_millis: u64, ripple: &RippleAnimation) -> LedInfof32 {
-    const MIDPOINT_X: f64 = 200.0;
-    const MIDPOINT_Y: f64 = 100.0;
+fn ripple_params(dt_millis: u64, ripple: &RippleAnimation) -> RippleParams {
     let ripple_head = (dt_millis % ripple.duration.as_millis() as u64) as f64 * ripple.speed / 1000.0 * LED_DISTANCE;
     let ripple_width = ripple.light_amount * LED_DISTANCE;
-    let pos = (pos.0 - MIDPOINT_X, pos.1 - MIDPOINT_Y);
-    let d = f64::sqrt(f64::powi(pos.0, 2) + f64::powi(pos.1, 2));
-    let distance = ripple_head - d;
 
-    if distance > 0.0 && distance < ripple_width {
-        // The key is inside the ripple
-        let sample_point = (distance / ripple_width) as f32;
-        let effect_color = sample_animation(sample_point, &ripple.animation);
-        (pos, CorsairLedColorf32 {
-            id,
-            color: alpha_compose(color, effect_color)
-        })
-    } else {
-        // Don't do nothing
-        (pos, CorsairLedColorf32 {
-            id,
-            color
-        })
+    RippleParams {
+        head: ripple_head,
+        width: ripple_width,
     }
 }
 
-pub(crate) fn colorchange_effect<'a>(leds: Ledsf32<'a>, dt_millis: u64, colorchange: &'a ColorChangeAnimation) -> Ledsf32<'a> {
-    Box::new(leds.map(move |key| {
-        colorchange_key(key, dt_millis, colorchange)
-    }))
+pub(crate) fn ripple_effect<'a>(leds: &mut [LedInfof32], dt_millis: u64, ripple: &'a RippleAnimation) {
+    let params = ripple_params(dt_millis, ripple);
+    for led in leds {
+        ripple_led(led, dt_millis, ripple, &params)
+    }
 }
 
-pub(crate) fn colorchange_key((pos, CorsairLedColorf32 {id, color}): LedInfof32, dt_millis: u64, colorchange: &ColorChangeAnimation) -> LedInfof32 {
+fn ripple_key(key: &mut LedInfof32, dt_millis: u64, ripple: &RippleAnimation) {
+    let params = ripple_params(dt_millis, ripple);
+    ripple_led(key, dt_millis, ripple, &params);
+}
+
+fn ripple_led((pos, CorsairLedColorf32 {id, color}): &mut LedInfof32, dt_millis: u64, ripple: &RippleAnimation, params: &RippleParams) {
+    const MIDPOINT_X: f64 = 200.0;
+    const MIDPOINT_Y: f64 = 100.0;
+    let pos = (pos.0 - MIDPOINT_X, pos.1 - MIDPOINT_Y);
+    let d = f64::sqrt(f64::powi(pos.0, 2) + f64::powi(pos.1, 2));
+    let distance = params.head - d;
+
+    if distance > 0.0 && distance < params.width {
+        // The key is inside the ripple
+        let sample_point = (distance / params.width) as f32;
+        let effect_color = sample_animation(sample_point, &ripple.animation);
+        alpha_compose(color, effect_color)
+    }
+}
+
+pub(crate) fn colorchange_effect<'a>(leds: &mut [LedInfof32], dt_millis: u64, colorchange: &'a ColorChangeAnimation) {
+    for led in leds {
+        colorchange_key(led, dt_millis, colorchange)
+    }
+}
+
+pub(crate) fn colorchange_key((pos, CorsairLedColorf32 {id, color}): &mut LedInfof32, dt_millis: u64, colorchange: &ColorChangeAnimation) {
     let sample_point = dt_millis as f32 / colorchange.duration.as_millis() as f32;
     let effect_color = sample_animation(sample_point, &colorchange.animation);
-    (pos, CorsairLedColorf32 {
-        id,
-        color: alpha_compose(color, effect_color)
-    })
+    alpha_compose(color, effect_color)
 }
 
 fn sample_animation(sample_point: f32, animation: &ColorAnimation) -> RGBAf32 {
@@ -199,7 +213,7 @@ fn oklab_to_srgb(color: RGBAf32) -> RGBAf32 {
     )
 }
 
-pub(super) fn rgbaf32_to_rgbau8(color: RGBAf32) -> RGBA {
+pub(super) fn rgbaf32_to_rgbau8(color: &RGBAf32) -> RGBA {
     //let color = oklab_to_srgb(color);
 
     (
@@ -210,17 +224,17 @@ pub(super) fn rgbaf32_to_rgbau8(color: RGBAf32) -> RGBA {
     )
 }
 
-fn alpha_compose(under_color: RGBAf32, over_color: RGBAf32) -> RGBAf32 {
+fn alpha_compose(under_color: &mut RGBAf32, over_color: RGBAf32) {
     let (u_r, u_g, u_b, u_a) = under_color;
     let (o_r, o_g, o_b, o_a) = over_color;
     let repr_o_a = 1.0 - o_a;
-    let out_a = o_a + u_a * repr_o_a;
+    let out_a = o_a + *u_a * repr_o_a;
     let inv_out_a = 1.0 / out_a;
     let a_1 = o_a * inv_out_a;
-    let a_2 = u_a * repr_o_a * inv_out_a;
-    let out_r = o_r * a_1 + u_r * a_2;
-    let out_g = o_g * a_1 + u_g * a_2;
-    let out_b = o_b * a_1 + u_b * a_2;
+    let a_2 = *u_a * repr_o_a * inv_out_a;
+    *u_r = o_r * a_1 + *u_r * a_2;
+    *u_g = o_g * a_1 + *u_g * a_2;
+    *u_b = o_b * a_1 + *u_b * a_2;
 
-    (out_r,out_g,out_b,out_a)
+    *u_a = out_a;
 }

@@ -3,7 +3,7 @@ use std::{os::raw::c_void, sync::mpsc::{self, Receiver, Sender}, time::{Duration
 use effects::{CorsairLedColorf32, Ledsf32};
 use icue_bindings::{types::{CorsairDeviceId, CorsairDeviceType, CorsairLedColor, CorsairLedLuid, CorsairLedPosition, CorsairSessionState}, CorsairConnect, CorsairGetDevices, CorsairGetLedPositions, CorsairSetLedColors};
 
-use self::effects::{floatled_to_colorled, ripple_effect, ripple_key, static_effect, static_key, wave_effect, wave_key, Effect, LedInfof32};
+use self::effects::{floatled_to_colorled, ripple_effect, static_effect, static_key, wave_effect, wave_key, Effect, LedInfof32};
 
 static mut STATE: CorsairSessionState = CorsairSessionState::Invalid;
 
@@ -90,7 +90,7 @@ fn listener(rx: Receiver<CorsairMsg>) {
 struct CorsairState {
     start_time: Instant,
     keyboard_id: Option<CorsairDeviceId>,
-    leds: Vec<CorsairLedPosition>,
+    leds: Vec<LedInfof32>,
     effects: Vec<Effect>,
     key_effects: Vec<(CorsairLedLuid, Effect)>,
 }
@@ -120,7 +120,15 @@ impl CorsairState {
 
             // TODO: Do Option<String> instead of String for this reason
             if let Some(id) = &self.keyboard_id {
-                self.leds = CorsairGetLedPositions(id).unwrap();
+                self.leds = CorsairGetLedPositions(id).unwrap().into_iter().map(|led| {
+                    (
+                        (led.cx, led.cy),
+                        CorsairLedColorf32 {
+                            id: led.id,
+                            color: (0.0, 0.0, 0.0, 1.0)
+                        }
+                    )
+                }).collect();
             }
         }
     }
@@ -129,25 +137,18 @@ impl CorsairState {
         // TODO: Improve performance. Too many clones
         let dt = self.start_time.elapsed().as_millis() as u64;
         //let nanos = self.start_time.elapsed().as_nanos() as u64;
-        let mut leds: Ledsf32<'_> = Box::new(self.leds.iter()
-            .map(|led| {
-                (
-                    (led.cx, led.cy),
-                    CorsairLedColorf32 {
-                        id: led.id,
-                        color: (0.0, 0.0, 0.0, 1.0)
-                    })
-            }));
-            for effect in self.effects.iter() {
-                match effect {
-                    Effect::Static(color) => leds = static_effect(leds, color.clone()),
-                    Effect::Wave(wave) => leds = wave_effect(leds, dt, &wave),
-                    Effect::Ripple(ripple) => leds = ripple_effect(leds, dt, &ripple),
-                    Effect::ColorChange => (),
-                }
-            }
+        let mut leds: Vec<_> = self.leds.clone();
 
-        for (key, effect) in self.key_effects.iter() {
+        for effect in self.effects.iter() {
+            match effect {
+                Effect::Static(color) => static_effect(&mut leds, color.clone()),
+                Effect::Wave(wave) => wave_effect(&mut leds, dt, &wave),
+                Effect::Ripple(ripple) => ripple_effect(&mut leds, dt, &ripple),
+                Effect::ColorChange => (),
+            }
+        }
+
+        /* for (key, effect) in self.key_effects.iter() {
             let effect: Box<dyn Fn(LedInfof32) -> LedInfof32> = match effect {
                 Effect::Static(color) => Box::new(move |key| static_key(key, color.clone())),
                 Effect::Wave(wave) => Box::new(move |key| wave_key(key, dt, wave)),
@@ -162,9 +163,9 @@ impl CorsairState {
                     led
                 }
             }))
-        }
+        } */
 
-        floatled_to_colorled(leds).map(|(_, led)| led).collect()
+        floatled_to_colorled(&leds).map(|(_, led)| led).collect()
     }
 
     fn tick(&mut self) {
