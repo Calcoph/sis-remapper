@@ -13,7 +13,6 @@ pub(crate) struct CorsairLedColorf32 {
 type LedInfo = ((f64, f64), CorsairLedColor);
 pub(crate) type LedInfof32 = ((f64, f64), CorsairLedColorf32);
 type Leds<'a> = Box<dyn Iterator<Item=LedInfo> + 'a>;
-pub(crate) type Ledsf32<'a> = Box<dyn Iterator<Item=LedInfof32> + 'a>;
 
 #[derive(Debug, Clone)]
 pub(crate) enum Effect {

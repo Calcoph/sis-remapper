@@ -1,9 +1,9 @@
 use std::{os::raw::c_void, sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
-use effects::{CorsairLedColorf32, Ledsf32};
-use icue_bindings::{types::{CorsairDeviceId, CorsairDeviceType, CorsairLedColor, CorsairLedLuid, CorsairLedPosition, CorsairSessionState}, CorsairConnect, CorsairGetDevices, CorsairGetLedPositions, CorsairSetLedColors};
+use effects::CorsairLedColorf32;
+use icue_bindings::{types::{CorsairDeviceId, CorsairDeviceType, CorsairLedColor, CorsairLedLuid, CorsairSessionState}, CorsairConnect, CorsairGetDevices, CorsairGetLedPositions, CorsairSetLedColors};
 
-use self::effects::{floatled_to_colorled, ripple_effect, static_effect, static_key, wave_effect, wave_key, Effect, LedInfof32};
+use self::effects::{floatled_to_colorled, ripple_effect, static_effect, wave_effect, Effect, LedInfof32};
 
 static mut STATE: CorsairSessionState = CorsairSessionState::Invalid;
 
