@@ -1,8 +1,9 @@
 use std::{os::raw::c_void, sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
-use icue_bindings::{types::{CorsairDeviceId, CorsairDeviceType, CorsairLedColor, CorsairLedLuid, CorsairLedPosition, CorsairSessionState}, CorsairConnect, CorsairGetDevices, CorsairGetLedPositions, CorsairSetLedColors};
+use effects::{CorsairLedColorf32, Ledsf32};
+use icue_bindings::{types::{CorsairDeviceId, CorsairDeviceType, CorsairLedLuid, CorsairLedPosition, CorsairSessionState}, CorsairConnect, CorsairGetDevices, CorsairGetLedPositions, CorsairSetLedColors};
 
-use self::effects::{clorled_to_floatled, floatled_to_colorled, ripple_effect, ripple_key, static_effect, static_key, wave_effect, wave_key, Effect, LedInfof32};
+use self::effects::{floatled_to_colorled, ripple_effect, ripple_key, static_effect, static_key, wave_effect, wave_key, Effect, LedInfof32};
 
 static mut STATE: CorsairSessionState = CorsairSessionState::Invalid;
 
@@ -116,17 +117,13 @@ impl CorsairState {
             // TODO: Improve performance. Too many clones
             let dt = self.start_time.elapsed().as_millis() as u64;
             //let nanos = self.start_time.elapsed().as_nanos() as u64;
-            let leds = self.leds.iter()
+            let mut leds: Ledsf32<'_> = Box::new(self.leds.iter()
                 .map(|led| {
-                    ((led.cx, led.cy), CorsairLedColor {
+                    ((led.cx, led.cy), CorsairLedColorf32 {
                         id: led.id,
-                        r: 0,
-                        g: 0,
-                        b: 0,
-                        a: 255,
+                        color: (0.0, 0.0, 0.0, 1.0)
                     })
-            });
-            let mut leds = clorled_to_floatled(Box::new(leds));
+            }));
             for effect in self.effects.iter() {
                 match effect {
                     Effect::Static(color) => leds = static_effect(leds, color.clone()),

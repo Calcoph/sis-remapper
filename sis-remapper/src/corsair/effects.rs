@@ -6,13 +6,13 @@ const LED_DISTANCE: f64 = 20.0;
 
 pub(crate) struct CorsairLedColorf32 {
     pub id: CorsairLedLuid,
-    color: RGBAf32
+    pub(crate) color: RGBAf32
 }
 
 type LedInfo = ((f64, f64), CorsairLedColor);
 pub(crate) type LedInfof32 = ((f64, f64), CorsairLedColorf32);
 type Leds<'a> = Box<dyn Iterator<Item=LedInfo> + 'a>;
-type Ledsf32<'a> = Box<dyn Iterator<Item=LedInfof32> + 'a>;
+pub(crate) type Ledsf32<'a> = Box<dyn Iterator<Item=LedInfof32> + 'a>;
 
 #[derive(Debug, Clone)]
 pub(crate) enum Effect {
@@ -20,16 +20,6 @@ pub(crate) enum Effect {
     Wave(WaveAnimation),
     Ripple(RippleAnimation),
     ColorChange,
-}
-
-pub(crate) fn clorled_to_floatled<'a>(leds: Leds<'a>) -> Ledsf32<'a> {
-    Box::new(leds.map(|(pos, CorsairLedColor { id, r, g, b, a })| {
-        let color = rgbau8_to_rgbaf32((r, g, b, a));
-        (pos, CorsairLedColorf32 {
-            id,
-            color
-        })
-    }))
 }
 
 pub(crate) fn floatled_to_colorled(leds: Ledsf32) -> Leds {
