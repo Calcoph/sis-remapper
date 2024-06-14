@@ -4,8 +4,8 @@ use corsair::init_corsair;
 use hotkey_handler::HotkeyHandler;
 use windows::Win32::UI::WindowsAndMessaging::{GetMessageW, MSG, WM_HOTKEY};
 
-mod hotkey_handler;
 mod corsair;
+mod hotkey_handler;
 
 fn main() {
     init();

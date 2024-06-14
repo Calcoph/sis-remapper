@@ -1,13 +1,16 @@
 use std::{os::raw::c_void, sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
 use effects::{CorsairLedColorf32, Ledsf32};
-use icue_bindings::{types::{CorsairDeviceId, CorsairDeviceType, CorsairLedLuid, CorsairLedPosition, CorsairSessionState}, CorsairConnect, CorsairGetDevices, CorsairGetLedPositions, CorsairSetLedColors};
+use icue_bindings::{types::{CorsairDeviceId, CorsairDeviceType, CorsairLedColor, CorsairLedLuid, CorsairLedPosition, CorsairSessionState}, CorsairConnect, CorsairGetDevices, CorsairGetLedPositions, CorsairSetLedColors};
 
 use self::effects::{floatled_to_colorled, ripple_effect, ripple_key, static_effect, static_key, wave_effect, wave_key, Effect, LedInfof32};
 
 static mut STATE: CorsairSessionState = CorsairSessionState::Invalid;
 
 pub(crate) mod effects;
+
+#[cfg(feature = "testable_privates")]
+pub mod test_exposer;
 
 pub(crate) enum CorsairMsg {
     Connected,
@@ -32,20 +35,35 @@ fn corsair_handler(
     }
 }
 
-pub(crate) fn init_corsair() -> Sender<CorsairMsg> {
+fn corsair_connect() -> (Sender<CorsairMsg>, Receiver<CorsairMsg>) {
+    let context: *mut c_void = ((&mut [0;2]) as *mut i32) as *mut c_void; // Allocate sizeof::<i32>() * 2 = 4*2 = 8 bytes
+    let (tx, rx) = mpsc::channel();
+    let corsair_tx = tx.clone();
     unsafe {
-        let context: *mut c_void = ((&mut [0;2]) as *mut i32) as *mut c_void; // Allocate sizeof::<i32>() * 2 = 4*2 = 8 bytes
-        let (tx, rx) = mpsc::channel();
-        let corsair_tx = tx.clone();
         let _ = CorsairConnect(
             Some(Box::new(move |state, details| {
                 corsair_handler(state, details, &tx)
             })),
             context
         );
-        std::thread::spawn(||listener(rx));
+    }
 
-        corsair_tx
+    (corsair_tx, rx)
+}
+
+pub(crate) fn init_corsair() -> Sender<CorsairMsg> {
+    let (tx, rx) = corsair_connect();
+    std::thread::spawn(||listener(rx));
+
+    tx
+}
+
+fn wait_connection(corsair_state: &mut CorsairState, rx: &Receiver<CorsairMsg>, connected: &mut bool) {
+    while let Ok(msg) = rx.recv() {
+        corsair_state.handle_msg(connected, msg);
+        if *connected {
+            break;
+        }
     }
 }
 
@@ -54,12 +72,7 @@ fn listener(rx: Receiver<CorsairMsg>) {
     let mut corsair_state = CorsairState::new();
     loop {
         if !connected {
-            while let Ok(msg) = rx.recv() {
-                corsair_state.handle_msg(&mut connected, msg);
-                if connected {
-                    break;
-                }
-            }
+            wait_connection(&mut corsair_state, &rx, &mut connected);
             connected = true;
             corsair_state.setup()
         } else {
@@ -112,14 +125,15 @@ impl CorsairState {
         }
     }
 
-    fn tick(&mut self) {
-        if let Some(keyboard_id) = &self.keyboard_id {
-            // TODO: Improve performance. Too many clones
-            let dt = self.start_time.elapsed().as_millis() as u64;
-            //let nanos = self.start_time.elapsed().as_nanos() as u64;
-            let mut leds: Ledsf32<'_> = Box::new(self.leds.iter()
-                .map(|led| {
-                    ((led.cx, led.cy), CorsairLedColorf32 {
+    fn get_led_colors(&self) -> Vec<CorsairLedColor> {
+        // TODO: Improve performance. Too many clones
+        let dt = self.start_time.elapsed().as_millis() as u64;
+        //let nanos = self.start_time.elapsed().as_nanos() as u64;
+        let mut leds: Ledsf32<'_> = Box::new(self.leds.iter()
+            .map(|led| {
+                (
+                    (led.cx, led.cy),
+                    CorsairLedColorf32 {
                         id: led.id,
                         color: (0.0, 0.0, 0.0, 1.0)
                     })
@@ -133,24 +147,29 @@ impl CorsairState {
                 }
             }
 
-            for (key, effect) in self.key_effects.iter() {
-                let effect: Box<dyn Fn(LedInfof32) -> LedInfof32> = match effect {
-                    Effect::Static(color) => Box::new(move |key| static_key(key, color.clone())),
-                    Effect::Wave(wave) => Box::new(move |key| wave_key(key, dt, &wave)),
-                    Effect::Ripple(ripple) => Box::new(move |key| ripple_key(key, dt, &ripple)),
-                    Effect::ColorChange => Box::new(move |key| key),
-                };
+        for (key, effect) in self.key_effects.iter() {
+            let effect: Box<dyn Fn(LedInfof32) -> LedInfof32> = match effect {
+                Effect::Static(color) => Box::new(move |key| static_key(key, color.clone())),
+                Effect::Wave(wave) => Box::new(move |key| wave_key(key, dt, wave)),
+                Effect::Ripple(ripple) => Box::new(move |key| ripple_key(key, dt, ripple)),
+                Effect::ColorChange => Box::new(move |key| key),
+            };
 
-                leds = Box::new(leds.map(move |led| {
-                    if led.1.id == *key {
-                        effect(led)
-                    } else {
-                        led
-                    }
-                }))
-            }
+            leds = Box::new(leds.map(move |led| {
+                if led.1.id == *key {
+                    effect(led)
+                } else {
+                    led
+                }
+            }))
+        }
 
-            let leds: Vec<_> = floatled_to_colorled(leds).map(|(_, led)| led).collect();
+        floatled_to_colorled(leds).map(|(_, led)| led).collect()
+    }
+
+    fn tick(&mut self) {
+        if let Some(keyboard_id) = &self.keyboard_id {
+            let leds = self.get_led_colors();
             unsafe {
                 CorsairSetLedColors(keyboard_id, leds).unwrap();
             }

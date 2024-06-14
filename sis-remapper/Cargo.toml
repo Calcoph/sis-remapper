@@ -19,3 +19,14 @@ features = [
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging"
 ]
+
+[dev-dependencies]
+criterion = {version = "0.5.1", features = ["html_reports"] }
+
+[[bench]]
+name = "light_effects"
+harness = false
+
+[features]
+default = ["testable_privates"] # Uncomment to make rust-analyzer happy, but always comment before commit
+testable_privates = []
