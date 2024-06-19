@@ -1,10 +1,11 @@
 use std::{os::raw::c_void, sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
 use icue_bindings::{types::{CorsairDeviceId, CorsairDeviceType, CorsairLedColor, CorsairLedLuid, CorsairSessionState}, CorsairConnect, CorsairGetDevices, CorsairGetLedPositions, CorsairSetLedColors};
+use simd_effects::SimdLeds;
 
 use crate::corsair::{corsair_connect, effects::{CorsairLedColorf32, Effect}, CorsairMsg};
 
-use self::simd_effects::{floatled_to_colorled, ripple_effect, static_effect, wave_effect, LedInfof32};
+use self::simd_effects::{ripple_effect, static_effect, wave_effect, LedInfof32};
 
 static mut STATE: CorsairSessionState = CorsairSessionState::Invalid;
 
@@ -52,7 +53,7 @@ fn listener(rx: Receiver<CorsairMsg>) {
 struct CorsairState {
     start_time: Instant,
     keyboard_id: Option<CorsairDeviceId>,
-    leds: Vec<LedInfof32>,
+    leds: SimdLeds,
     effects: Vec<Effect>,
     key_effects: Vec<(CorsairLedLuid, Effect)>,
 }
@@ -62,7 +63,7 @@ impl CorsairState {
         CorsairState {
             start_time: Instant::now(),
             keyboard_id: None,
-            leds: Vec::new(),
+            leds: SimdLeds::new(),
             effects: Vec::new(),
             key_effects: Vec::new(),
         }
@@ -82,31 +83,25 @@ impl CorsairState {
 
             // TODO: Do Option<String> instead of String for this reason
             if let Some(id) = &self.keyboard_id {
-                self.leds = CorsairGetLedPositions(id).unwrap().into_iter().map(|led| {
-                    (
-                        (led.cx, led.cy),
-                        CorsairLedColorf32 {
-                            id: led.id,
-                            color: (0.0, 0.0, 0.0, 1.0)
-                        }
-                    )
-                }).collect();
+                self.leds.load(CorsairGetLedPositions(id).unwrap());
             }
         }
     }
 
-    fn get_led_colors(&self) -> Vec<CorsairLedColor> {
+    fn get_led_colors(&mut self) -> Vec<CorsairLedColor> {
         // TODO: Improve performance. Too many clones
         let dt = self.start_time.elapsed().as_millis() as u64;
         //let nanos = self.start_time.elapsed().as_nanos() as u64;
-        let mut leds: Vec<_> = self.leds.clone();
+        {
+            let leds = self.leds.get_leds();
 
-        for effect in self.effects.iter() {
-            match effect {
-                Effect::Static(color) => static_effect(&mut leds, color.clone()),
-                Effect::Wave(wave) => wave_effect(&mut leds, dt, &wave),
-                Effect::Ripple(ripple) => ripple_effect(&mut leds, dt, &ripple),
-                Effect::ColorChange => (),
+            for effect in self.effects.iter() {
+                match effect {
+                    Effect::Static(color) => static_effect(leds, color),
+                    Effect::Wave(wave) => wave_effect(leds, dt, &wave),
+                    Effect::Ripple(ripple) => ripple_effect(leds, dt, &ripple),
+                    Effect::ColorChange => (),
+                }
             }
         }
 
@@ -127,14 +122,14 @@ impl CorsairState {
             }))
         } */
 
-        floatled_to_colorled(&leds).map(|(_, led)| led).collect()
+        self.leds.get_led_colors()
     }
 
     fn tick(&mut self) {
-        if let Some(keyboard_id) = &self.keyboard_id {
+        if self.keyboard_id.is_some() {
             let leds = self.get_led_colors();
             unsafe {
-                CorsairSetLedColors(keyboard_id, leds).unwrap();
+                CorsairSetLedColors(self.keyboard_id.as_ref().unwrap(), leds).unwrap();
             }
             // TODO: Allow change the thread::sleep time from config file
             std::thread::sleep(Duration::from_millis(100)) // Refresh color once per second (+ the time it takes to update)

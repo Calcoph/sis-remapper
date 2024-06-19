@@ -1,3 +1,5 @@
+#![feature(stdarch_x86_avx512)]
+
 use std::process::exit;
 
 use corsair::init_corsair;

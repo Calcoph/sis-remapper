@@ -379,6 +379,16 @@ pub struct ColorChangeAnimation {
 }
 
 
+pub struct SimdKeyframes {
+    pub timestamps: Vec<f32>,
+    pub colors: Vec<RGBAf32>
+}
+
+pub struct SimdColorAnimation {
+    pub name: String,
+    pub keyframes: SimdKeyframes
+}
+
 #[derive(Debug, Clone)]
 pub struct ColorAnimation {
     pub name: String,

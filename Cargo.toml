@@ -4,5 +4,5 @@ members = [
     "icue-bindings",
     "config-parse",
     "sis-remapper",
-    "sis-core",
+    "sis-core", "asm_try",
 ]

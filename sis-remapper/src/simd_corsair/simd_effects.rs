@@ -1,26 +1,219 @@
 use cgmath::Angle;
-use icue_bindings::types::{CorsairLedColor, CorsairLedLuid};
-use sis_core::{rgbau8_to_rgbaf32, ColorAnimation, ColorChangeAnimation, RGBAf32, RippleAnimation, WaveAnimation, RGBA};
+use icue_bindings::types::{CorsairLedColor, CorsairLedLuid, CorsairLedPosition};
+use m512::{f32x16, ConstM512};
+use sis_core::{rgbau8_to_rgbaf32, ColorAnimation, ColorChangeAnimation, RGBAf32, RippleAnimation, SimdColorAnimation, WaveAnimation, RGBA};
 
 use crate::corsair::effects::CorsairLedColorf32;
 
+mod m512;
+
 const LED_DISTANCE: f64 = 20.0;
 
-struct SimdLeds {
-    positions: Vec<(f64, f64)>,
-    colors: Vec<SimdRGBLeds>,
-    ids: Vec<CorsairLedLuid>
-}
+const COLORS_PER_SIMD: usize = 5;
+const POSITIONS_PER_SIMD: usize = 8;
 
-
-#[repr(align(64))]
+#[repr(C, align(64))]
 struct SimdRGBLeds {
+    l0: [f32;3],
     l1: [f32;3],
     l2: [f32;3],
     l3: [f32;3],
     l4: [f32;3],
-    l5: [f32;3],
     _pad: f32,
+}
+impl SimdRGBLeds {
+    fn as_ptr(&self) -> *const f32 {
+        self.l0.as_ptr()
+    }
+
+    fn as_mut_ptr(&mut self) -> *mut f32 {
+        self.l0.as_mut_ptr()
+    }
+}
+
+pub(crate) struct SimdRGBALeds {
+    color: SimdRGBLeds,
+    alpha: SimdRGBLeds, // Each channel has an alpha for SIMD reasons, but they are just duplicated so every channel has the same alpha
+}
+impl SimdRGBALeds {
+    fn copy_color(effect_color: &(f32, f32, f32, f32)) -> SimdRGBALeds {
+        let color = [effect_color.0, effect_color.1, effect_color.2];
+        let alpha = [effect_color.3;3];
+        SimdRGBALeds {
+            color: SimdRGBLeds {
+                l0: color,
+                l1: color,
+                l2: color,
+                l3: color,
+                l4: color,
+                _pad: 0.0,
+            },
+            alpha: SimdRGBLeds {
+                l0: alpha,
+                l1: alpha,
+                l2: alpha,
+                l3: alpha,
+                l4: alpha,
+                _pad: 0.0
+            }
+        }
+    }
+
+    fn get_leds(&self, ids: &[CorsairLedLuid]) -> Vec<CorsairLedColor> {
+        let convert_color = |id, rgb: [f32;3], a| {
+            let a = (a * 255.0) as u8;
+            CorsairLedColor {
+                id,
+                r: (rgb[0] * 255.0) as u8,
+                g: (rgb[1] * 255.0) as u8,
+                b: (rgb[2] * 255.0) as u8,
+                a,
+            }
+        };
+        ids.into_iter()
+            .enumerate()
+            .map(|(i, id)| {
+                let (rgb, a) = match i {
+                    0 => (self.color.l0, self.alpha.l0[0]),
+                    1 => (self.color.l1, self.alpha.l1[0]),
+                    2 => (self.color.l2, self.alpha.l2[0]),
+                    3 => (self.color.l3, self.alpha.l3[0]),
+                    4 => (self.color.l4, self.alpha.l4[0]),
+                    _ => unreachable!()
+                };
+
+                convert_color(*id, rgb, a)
+            }).collect()
+    }
+}
+
+#[repr(C, align(64))]
+#[derive(Clone)]
+struct SimdPositions([[f32;2];POSITIONS_PER_SIMD]);
+
+pub(crate) struct SimdLeds {
+    initial_positions: Vec<SimdPositions>,
+    positions: Vec<SimdPositions>, // a (mutable) copy of initial_positions to avoid constant allocations and freeings
+    colors: Vec<SimdRGBALeds>,
+    ids: Vec<CorsairLedLuid>,
+}
+impl SimdLeds {
+    pub(crate) fn new() -> Self {
+        Self {
+            initial_positions: Vec::new(),
+            colors: Vec::new(),
+            ids: Vec::new(),
+            positions: Vec::new(),
+        }
+    }
+
+    pub(crate) fn load(&mut self, leds: Vec<CorsairLedPosition>) {
+        const EMPTY_RGBA: SimdRGBALeds = SimdRGBALeds {
+            color: SimdRGBLeds {
+                l0: [0.0,0.0,0.0],
+                l1: [0.0,0.0,0.0],
+                l2: [0.0,0.0,0.0],
+                l3: [0.0,0.0,0.0],
+                l4: [0.0,0.0,0.0],
+                _pad: 0.0,
+            },
+            alpha: SimdRGBLeds {
+                l0: [1.0,1.0,1.0],
+                l1: [1.0,1.0,1.0],
+                l2: [1.0,1.0,1.0],
+                l3: [1.0,1.0,1.0],
+                l4: [1.0,1.0,1.0],
+                _pad: 0.0,
+            },
+        };
+        const EMPTY_POSITION: SimdPositions = SimdPositions([
+            [0.0, 0.0],
+            [0.0, 0.0],
+            [0.0, 0.0],
+            [0.0, 0.0],
+            [0.0, 0.0],
+            [0.0, 0.0],
+            [0.0, 0.0],
+            [0.0, 0.0],
+        ]);
+
+        self.initial_positions.clear();
+        self.colors.clear();
+        self.ids.clear();
+
+        for (led_count, led) in leds.into_iter().enumerate() {
+            let CorsairLedPosition {
+                id,
+                cx,
+                cy,
+            } = led;
+
+            self.ids.push(id);
+
+            const LAST_LED_POSITION: usize = POSITIONS_PER_SIMD - 2;
+            match led_count % POSITIONS_PER_SIMD {
+                0 => {
+                    let mut position = EMPTY_POSITION;
+                    position.0[0][0] = cx as f32;
+                    position.0[0][1] = cy as f32;
+                    self.initial_positions.push(position);
+                    self.positions.push(EMPTY_POSITION);
+                },
+                i @ 1..=LAST_LED_POSITION => {
+                    let position = self.initial_positions.last_mut().unwrap();
+                    position.0[i][0] = cx as f32;
+                    position.0[i][1] = cy as f32;
+                }
+                _ => unreachable!()
+            }
+
+            const LAST_LED_COLOR: usize = COLORS_PER_SIMD - 2;
+            match led_count % COLORS_PER_SIMD {
+                0 => {
+                    self.colors.push(EMPTY_RGBA);
+                },
+                1..=LAST_LED_COLOR => (),
+                _ => unreachable!()
+            }
+        }
+    }
+
+    pub(crate) fn get_leds(&mut self) -> &mut Vec<SimdRGBALeds> {
+        // Reset colors
+        for color in self.colors.iter_mut() {
+            color.color.l0 = [0.0,0.0,0.0];
+            color.color.l1 = [0.0,0.0,0.0];
+            color.color.l2 = [0.0,0.0,0.0];
+            color.color.l3 = [0.0,0.0,0.0];
+            color.color.l4 = [0.0,0.0,0.0];
+            color.color._pad = 0.0;
+
+            color.alpha.l0 = [1.0,1.0,1.0];
+            color.alpha.l1 = [1.0,1.0,1.0];
+            color.alpha.l2 = [1.0,1.0,1.0];
+            color.alpha.l3 = [1.0,1.0,1.0];
+            color.alpha.l4 = [1.0,1.0,1.0];
+            color.alpha._pad = 0.0;
+        };
+
+        &mut self.colors
+    }
+
+    pub(crate) fn get_positions(&mut self) -> &mut Vec<SimdPositions> {
+        // Reset positions
+        for (position, original) in self.positions.iter_mut().zip(self.initial_positions.iter()) {
+            *position = original.clone();
+        };
+
+        &mut self.positions
+    }
+
+    pub(crate) fn get_led_colors(&self) -> Vec<CorsairLedColor> {
+        self.ids.chunks(COLORS_PER_SIMD)
+            .zip(self.colors.iter())
+            .flat_map(|(ids, colors)| colors.get_leds(ids))
+            .collect()
+    }
 }
 
 type LedInfo = ((f64, f64), CorsairLedColor);
@@ -39,22 +232,14 @@ pub(crate) fn clorled_to_floatled<'a>(leds: Leds<'a>) -> Ledsf32<'a> {
     }))
 }
 
-pub(crate) fn floatled_to_colorled(leds: &[LedInfof32]) -> Leds {
-    Box::new(leds.iter().map(|(pos, CorsairLedColorf32 { id, color })| {
-        let (r,g,b,a) = rgbaf32_to_rgbau8(color);
-        ((pos.0, pos.1), CorsairLedColor {
-            id: id.clone(),
-            r,
-            g,
-            b,
-            a
-        })
-    }))
-}
-
-pub(crate) fn static_effect(leds: &mut [LedInfof32], effect_color: RGBAf32) {
+pub(crate) fn static_effect(leds: &mut [SimdRGBALeds], effect_color: &RGBAf32) {
+    let effect_color = SimdRGBALeds::copy_color(effect_color);
+    let (over_rgb, over_alpha) = (
+        f32x16::load_aligned(effect_color.color.as_ptr()),
+        f32x16::load_aligned(effect_color.alpha.as_ptr()),
+    );
     for led in leds {
-        static_key(led, effect_color)
+        leds_alpha_compose(led, over_rgb, over_alpha)
     }
 }
 
@@ -77,10 +262,11 @@ fn wave_params(dt_millis: u64, wave: &WaveAnimation) -> WaveParams {
     }
 }
 
-pub(crate) fn wave_effect<'a>(leds: &mut [LedInfof32], dt_millis: u64, wave: &'a WaveAnimation) {
+pub(crate) fn wave_effect<'a>(leds: &mut [SimdRGBALeds], dt_millis: u64, wave: &'a WaveAnimation) {
     let params = wave_params(dt_millis, wave);
     for led in leds {
-        wave_led(led, dt_millis, wave, &params);
+        todo!()
+        //wave_led(led, dt_millis, wave, &params);
     }
 }
 
@@ -106,24 +292,113 @@ fn wave_led((pos, CorsairLedColorf32 {id, color}): &mut LedInfof32, dt_millis: u
 }
 
 struct RippleParams {
-    head: f64,
-    width: f64
+    head: ConstM512,
+    width: ConstM512
 }
 
-fn ripple_params(dt_millis: u64, ripple: &RippleAnimation) -> RippleParams {
-    let ripple_head = (dt_millis % ripple.duration.as_millis() as u64) as f64 * ripple.speed / 1000.0 * LED_DISTANCE;
-    let ripple_width = ripple.light_amount * LED_DISTANCE;
+struct LoadedRippleParams {
+    head: f32x16,
+    width: f32x16,
+}
 
-    RippleParams {
-        head: ripple_head,
-        width: ripple_width,
+impl RippleParams {
+    fn load(&self) -> LoadedRippleParams {
+        let head = f32x16::load_aligned(self.head.as_ptr());
+        let width = f32x16::load_aligned(self.width.as_ptr());
+        LoadedRippleParams {
+            head,
+            width
+        }
     }
 }
 
-pub(crate) fn ripple_effect<'a>(leds: &mut [LedInfof32], dt_millis: u64, ripple: &'a RippleAnimation) {
+fn ripple_params(dt_millis: u64, ripple: &RippleAnimation) -> RippleParams {
+    let ripple_head = (dt_millis % ripple.duration.as_millis() as u64) as f32 * (ripple.speed as f32) / 1000.0 * (LED_DISTANCE as f32);
+    let ripple_width = (ripple.light_amount as f32) * (LED_DISTANCE as f32);
+
+    RippleParams {
+        head: ConstM512::single(ripple_head),
+        width: ConstM512::single(ripple_width),
+    }
+}
+
+pub(crate) fn ripple_effect<'a>(leds: &mut [SimdRGBALeds], positions: &mut [SimdPositions], dt_millis: u64, ripple: &'a RippleAnimation) {
+    const MIDPOINT: ConstM512 = ConstM512::repeat_2(200.0, 100.0);
+
+    let midpoint = f32x16::load_aligned(MIDPOINT.as_ptr());
+
     let params = ripple_params(dt_millis, ripple);
-    for led in leds {
-        ripple_led(led, dt_millis, ripple, &params)
+    let loaded_params = params.load();
+    let mut distances = Vec::with_capacity(positions.len() * POSITIONS_PER_SIMD); // there are 8 distances calculated per SimdPositions
+    let mut sampling_points = Vec::with_capacity(positions.len() * 8); // there are 8 sampling points calculated per SimdPositions
+    for position in positions {
+        ripple_calculate_sample_points(position, midpoint, &loaded_params);
+        for distance_and_sample in position.0 {
+            distances.push(distance_and_sample[0]);
+            sampling_points.push(distance_and_sample[1]);
+        }
+    };
+    for (i, led) in leds.iter_mut().enumerate() {
+        let array_range = (i*COLORS_PER_SIMD)..((i*COLORS_PER_SIMD)+16);
+        ripple_leds(
+            led,
+            &distances[array_range.clone()],
+            &sampling_points[array_range],
+            &ripple.animation,
+            &params
+        )
+    }
+}
+
+fn ripple_calculate_sample_points(position: &mut SimdPositions, midpoint: f32x16, params: &LoadedRippleParams) {
+    // pos = (pos.0 - MIDPOINT_X, pos.1 - MIDPOINT_Y);
+    let pos = f32x16::load_aligned(position.0[0].as_ptr());
+    let pos = pos - midpoint;
+
+    // d = sqrt(pos.0**2 + pos.1**2);
+    let pos_squared = pos * pos;
+    let alternate_pos_squared = pos_squared.swap2_same();
+    let d = (pos_squared + alternate_pos_squared).sqrt();
+
+    let distance = params.head - d;
+    // distance now contains all the distances (duplicated), like so:
+    // d0 d0 d1 d1
+    // d2 d2 d3 d3
+    // d4 d4 d5 d5
+    // d6 d6 d7 d7
+
+    let distance = distance.swap2_right();
+    // distance now contains all the distances (duplicated), like so:
+    // d0 d1 d1 d0
+    // d2 d3 d3 d2
+    // d4 d5 d5 d4
+    // d6 d7 d7 d6
+
+    let sample_point = distance / params.width;
+    // sample_point now contains all the sample points (duplicated), like so:
+    // s0 s1 s1 s0
+    // s2 s3 s3 s2
+    // s4 s5 s5 s4
+    // s6 s7 s7 s6
+
+    let distance_and_samples = distance.unpack_even(sample_point);
+    // distance_and_samples now contains all the sample points and distances, like so:
+    // d0 s0 d1 s1
+    // d2 s2 d3 s3
+    // d4 s4 d5 s5
+    // d6 s6 d7 s7
+
+    distance_and_samples.recover(position.0[0].as_mut_ptr())
+}
+
+fn ripple_leds(led: &mut SimdRGBALeds, distances: &[f32], sampling_points: &[f32], color_animation: &SimdColorAnimation, params: &RippleParams) {
+    // TODO: only set color if distance > 0.0 && distance < params.width
+    if distance > 0.0 && distance < params.width {
+        // The led is inside the ripple
+        let effect_color = sample_animation(sampling_points, color_animation);
+        let over_alpha = load_f32(effect_color.alpha.as_ptr());
+        let over_rgb = load_f32(effect_color.rgb.as_ptr());
+        leds_alpha_compose(led, over_rgb, over_alpha);
     }
 }
 
@@ -159,15 +434,40 @@ pub(crate) fn colorchange_key((pos, CorsairLedColorf32 {id, color}): &mut LedInf
     alpha_compose(color, &effect_color)
 }
 
-fn sample_animation(sample_point: f32, animation: &ColorAnimation) -> RGBAf32 {
-    assert!(sample_point <= 1.0);
-    assert!(sample_point >= 0.0);
-    let mut iter = animation.keyframes.iter();
+struct SampledAnimation {
+    rgb: f32x16,
+    alpha: f32x16
+}
+
+fn sample_animation(sampling_points: &[f32], animation: &SimdColorAnimation) -> SampledAnimation {
+    assert!(sampling_points.len() == 16);
+    for sample_point in sampling_points {
+        // TODO: enable these asserts only in debug mode
+        assert!(*sample_point <= 1.0);
+        assert!(*sample_point >= 0.0);
+    }
+    let sample_point = f32x16::load_unaligned(sampling_points.as_ptr());
+    let counter = f32x16::zero();
+    let sum = f32x16::load_aligned(ConstM512::single(1.0).as_ptr()); // TODO: can be const
     let mut previous_color = (0.0,0.0,0.0,0.0);
     let mut next_color = (0.0,0.0,0.0,0.0);
     let mut previous_timestamp = 0.0;
     let mut next_timestamp = 1.0;
-    loop {
+    let mut iter = animation.keyframes.timestamps.iter();
+    for timestamp in iter {
+        let timestamp = f32x16::load_aligned(ConstM512::single(*timestamp).as_ptr());
+        timestamp.incr_if_ge(sample_point, counter, sum);
+        if keyframe.timestamp > sample_point {
+            next_timestamp = keyframe.timestamp;
+            next_color = keyframe.color;
+            break;
+        } else {
+            previous_timestamp = keyframe.timestamp;
+            previous_color = keyframe.color;
+            next_color = keyframe.color;
+        }
+    }
+    /* loop {
         if let Some(keyframe) = iter.next() {
             if keyframe.timestamp > sample_point {
                 next_timestamp = keyframe.timestamp;
@@ -181,9 +481,18 @@ fn sample_animation(sample_point: f32, animation: &ColorAnimation) -> RGBAf32 {
         } else {
             break
         }
-    }
+    } */
 
-    linear_interpolation(previous_color, next_color, (sample_point-previous_timestamp)/(next_timestamp-previous_timestamp))
+    let t = (sample_point-previous_timestamp)/(next_timestamp-previous_timestamp);
+    simd_linear_interpolation(previous_color, next_color, t)
+}
+
+fn simd_linear_interpolation(previous_color: f32x16, next_color: f32x16, t: f32) -> f32x16 {
+    let rev_t = 1.0 - t;
+    let t = f32x16::load_aligned(ConstM512::single(t).as_ptr());
+    let rev_t = f32x16::load_aligned(ConstM512::single(rev_t).as_ptr());
+
+    rev_t * previous_color + t * next_color
 }
 
 fn linear_interpolation(previous_color: RGBAf32, next_color: RGBAf32, t: f32) -> RGBAf32 {
@@ -242,6 +551,30 @@ pub(super) fn rgbaf32_to_rgbau8(color: &RGBAf32) -> RGBA {
 
 #[repr(align(16))] // aligned to u128
 struct AlignedRGBA([f32;4]);
+
+fn leds_alpha_compose(under_color: &mut SimdRGBALeds, over_rgb: f32x16, over_alpha: f32x16) {
+    const ONE: ConstM512 = ConstM512::single(1.0);
+
+    unsafe {
+        let one = f32x16::load_aligned(ONE.as_ptr());
+        // repr_o_a = 1.0 - over_alpha;
+        let repr_o_a = one - over_alpha;
+
+        let u_a = f32x16::load_aligned(under_color.alpha.as_ptr());
+        let out_a = over_alpha + u_a * repr_o_a;
+        out_a.recover(under_color.alpha.as_mut_ptr());
+
+        // inv_out_a = 1.0 / out_a;
+        let inv_out_a = out_a.reciprocal();
+
+        let a_1 =  over_alpha * inv_out_a;
+        let a_2 = u_a * repr_o_a * inv_out_a;
+
+        let u_rgb = f32x16::load_aligned(under_color.color.as_ptr());
+        let rgb = over_rgb * a_1 + u_rgb * a_2;
+        rgb.recover(under_color.color.as_mut_ptr());
+    }
+}
 
 fn alpha_compose(under_color: &mut RGBAf32, over_rgb: &RGBAf32) {
     use std::arch::x86_64::_mm_load1_ps as simd_set_f32;
