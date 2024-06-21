@@ -146,8 +146,8 @@ fn sample_animation(sample_point: f32, animation: &ColorAnimation) -> RGBAf32 {
     assert!(sample_point <= 1.0);
     assert!(sample_point >= 0.0);
     let mut iter = animation.keyframes.iter();
-    let mut previous_color = (0.0,0.0,0.0,0.0);
-    let mut next_color = (0.0,0.0,0.0,0.0);
+    let mut previous_color = [0.0,0.0,0.0,0.0];
+    let mut next_color = [0.0,0.0,0.0,0.0];
     let mut previous_timestamp = 0.0;
     let mut next_timestamp = 1.0;
     loop {
@@ -170,62 +170,62 @@ fn sample_animation(sample_point: f32, animation: &ColorAnimation) -> RGBAf32 {
 }
 
 fn linear_interpolation(previous_color: RGBAf32, next_color: RGBAf32, t: f32) -> RGBAf32 {
-    (
-        (1.0 - t) * previous_color.0 + t * next_color.0,
-        (1.0 - t) * previous_color.1 + t * next_color.1,
-        (1.0 - t) * previous_color.2 + t * next_color.2,
-        (1.0 - t) * previous_color.3 + t * next_color.3,
-    )
+    [
+        (1.0 - t) * previous_color[0] + t * next_color[0],
+        (1.0 - t) * previous_color[1] + t * next_color[1],
+        (1.0 - t) * previous_color[2] + t * next_color[2],
+        (1.0 - t) * previous_color[3] + t * next_color[3],
+    ]
 }
 
 fn srg_to_oklab(color: RGBAf32) -> RGBAf32 {
-    let l = 0.4122214708f32 * color.0 as f32 + 0.5363325363f32 * color.1 as f32 + 0.0514459929f32 * color.2 as f32;
-	let m = 0.2119034982f32 * color.0 as f32 + 0.6806995451f32 * color.1 as f32 + 0.1073969566f32 * color.2 as f32;
-	let s = 0.0883024619f32 * color.0 as f32 + 0.2817188376f32 * color.1 as f32 + 0.6299787005f32 * color.2 as f32;
+    let l = 0.4122214708f32 * color[0] as f32 + 0.5363325363f32 * color[1] as f32 + 0.0514459929f32 * color[2] as f32;
+	let m = 0.2119034982f32 * color[0] as f32 + 0.6806995451f32 * color[1] as f32 + 0.1073969566f32 * color[2] as f32;
+	let s = 0.0883024619f32 * color[0] as f32 + 0.2817188376f32 * color[1] as f32 + 0.6299787005f32 * color[2] as f32;
 
     let l_ = f32::cbrt(l);
     let m_ = f32::cbrt(m);
     let s_ = f32::cbrt(s);
 
-    (
+    [
         0.2104542553f32*l_ + 0.7936177850f32*m_ - 0.0040720468f32*s_,
         1.9779984951f32*l_ - 2.4285922050f32*m_ + 0.4505937099f32*s_,
         0.0259040371f32*l_ + 0.7827717662f32*m_ - 0.8086757660f32*s_,
-        color.3 as f32,
-    )
+        color[3] as f32,
+    ]
 }
 
 fn oklab_to_srgb(color: RGBAf32) -> RGBAf32 {
-    let l_ = color.0 + 0.3963377774f32 * color.1 + 0.2158037573f32 * color.2;
-    let m_ = color.0 - 0.1055613458f32 * color.1 - 0.0638541728f32 * color.2;
-    let s_ = color.0 - 0.0894841775f32 * color.1 - 1.2914855480f32 * color.2;
+    let l_ = color[0] + 0.3963377774f32 * color[1] + 0.2158037573f32 * color[2];
+    let m_ = color[0] - 0.1055613458f32 * color[1] - 0.0638541728f32 * color[2];
+    let s_ = color[0] - 0.0894841775f32 * color[1] - 1.2914855480f32 * color[2];
 
     let l = l_*l_*l_;
     let m = m_*m_*m_;
     let s = s_*s_*s_;
 
-    (
+    [
 		4.0767416621f32 * l - 3.3077115913f32 * m + 0.2309699292f32 * s,
 		-1.2684380046f32 * l + 2.6097574011f32 * m - 0.3413193965f32 * s,
 		-0.0041960863f32 * l - 0.7034186147f32 * m + 1.7076147010f32 * s,
-        color.3,
-    )
+        color[3],
+    ]
 }
 
 pub(super) fn rgbaf32_to_rgbau8(color: &RGBAf32) -> RGBA {
     //let color = oklab_to_srgb(color);
 
     (
-        (color.0 * 255.0) as u8,
-        (color.1 * 255.0) as u8,
-        (color.2 * 255.0) as u8,
-        (color.3 * 255.0) as u8,
+        (color[0] * 255.0) as u8,
+        (color[1] * 255.0) as u8,
+        (color[2] * 255.0) as u8,
+        (color[3] * 255.0) as u8,
     )
 }
 
 fn alpha_compose(under_color: &mut RGBAf32, over_color: RGBAf32) {
-    let (u_r, u_g, u_b, u_a) = under_color;
-    let (o_r, o_g, o_b, o_a) = over_color;
+    let [u_r, u_g, u_b, u_a] = under_color;
+    let [o_r, o_g, o_b, o_a] = over_color;
     let repr_o_a = 1.0 - o_a;
     let out_a = o_a + *u_a * repr_o_a;
     let inv_out_a = 1.0 / out_a;

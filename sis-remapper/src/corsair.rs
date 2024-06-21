@@ -125,7 +125,7 @@ impl CorsairState {
                         (led.cx, led.cy),
                         CorsairLedColorf32 {
                             id: led.id,
-                            color: (0.0, 0.0, 0.0, 1.0)
+                            color: [0.0, 0.0, 0.0, 1.0]
                         }
                     )
                 }).collect();

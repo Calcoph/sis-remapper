@@ -393,16 +393,16 @@ pub struct Keyframe {
 }
 
 pub type RGBA = (u8,u8,u8,u8);
-pub type RGBAf32 = (f32,f32,f32,f32);
+pub type RGBAf32 = [f32;4];
 
 
 pub fn rgbau8_to_rgbaf32(color: RGBA) -> RGBAf32 {
-    let color = (
+    let color = [
         color.0 as f32 / 255.0,
         color.1 as f32 / 255.0,
         color.2 as f32 / 255.0,
         color.3 as f32 / 255.0,
-    );
+    ];
     //let color = srg_to_oklab(color);
     color
 }

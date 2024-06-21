@@ -1,3 +1,4 @@
+use bytemuck::{NoUninit, Pod, Zeroable};
 use cgmath::Angle;
 use icue_bindings::types::{CorsairLedColor, CorsairLedLuid};
 use sis_core::{rgbau8_to_rgbaf32, ColorAnimation, ColorChangeAnimation, RGBAf32, RippleAnimation, WaveAnimation, RGBA};
@@ -62,12 +63,19 @@ pub(crate) fn static_key((pos, CorsairLedColorf32 {id, color}): &mut LedInfof32,
     alpha_compose(color, &effect_color);
 }
 
-struct WaveParams {
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+#[repr(C)]
+pub(crate) struct WaveParams {
     head: f64,
     width: f64
 }
+impl WaveParams {
+    pub(crate) fn bytes(&self) -> &[u8] {
+        bytemuck::bytes_of(self)
+    }
+}
 
-fn wave_params(dt_millis: u64, wave: &WaveAnimation) -> WaveParams {
+pub(crate) fn wave_params(dt_millis: u64, wave: &WaveAnimation) -> WaveParams {
     let wave_head = (dt_millis % wave.duration.as_millis() as u64) as f64 * wave.speed / 1000.0 * LED_DISTANCE;
     let wave_width = wave.light_amount * LED_DISTANCE;
 
@@ -105,12 +113,19 @@ fn wave_led((pos, CorsairLedColorf32 {id, color}): &mut LedInfof32, dt_millis: u
     }
 }
 
-struct RippleParams {
+#[derive(Debug, Pod, Clone, Copy, Zeroable)]
+#[repr(C)]
+pub(crate) struct RippleParams {
     head: f64,
     width: f64
 }
+impl RippleParams {
+    pub(crate) fn bytes(&self) -> &[u8] {
+        bytemuck::bytes_of(self)
+    }
+}
 
-fn ripple_params(dt_millis: u64, ripple: &RippleAnimation) -> RippleParams {
+pub(crate) fn ripple_params(dt_millis: u64, ripple: &RippleAnimation) -> RippleParams {
     let ripple_head = (dt_millis % ripple.duration.as_millis() as u64) as f64 * ripple.speed / 1000.0 * LED_DISTANCE;
     let ripple_width = ripple.light_amount * LED_DISTANCE;
 

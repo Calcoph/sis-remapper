@@ -7,7 +7,8 @@ use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(feature = "testable_privates")]
 use sis_core::{ColorAnimation, Keyframe, RippleAnimation, WaveAnimation};
 #[cfg(feature = "testable_privates")]
-use sis_remapper::corsair::test_exposer::{PubCorsairState as CorsairState, PubEffect as Effect, corsair_singlethread_connect};
+use sis_remapper::wgpu_corsair::test_exposer::{PubCorsairState as CorsairState, PubEffect as Effect, corsair_singlethread_connect};
+//use sis_remapper::corsair::test_exposer::{PubCorsairState as CorsairState, PubEffect as Effect, corsair_singlethread_connect};
 
 #[cfg(feature = "testable_privates")]
 fn baseline(c: &mut Criterion, corsair_state: &mut CorsairState) {
@@ -19,7 +20,7 @@ fn baseline(c: &mut Criterion, corsair_state: &mut CorsairState) {
 #[cfg(feature = "testable_privates")]
 fn static_color_useless(c: &mut Criterion, corsair_state: &mut CorsairState) {
     corsair_state.remove_all_effects();
-    let effect = Effect::Static((0.0, 0.0, 0.0, 0.0));
+    let effect = Effect::Static([0.0, 0.0, 0.0, 0.0]);
     corsair_state.add_effect(effect);
 
     c.bench_function("static color useless", |b| b.iter(|| corsair_state.get_led_colors()));
@@ -28,7 +29,7 @@ fn static_color_useless(c: &mut Criterion, corsair_state: &mut CorsairState) {
 #[cfg(feature = "testable_privates")]
 fn static_color_opaque(c: &mut Criterion, corsair_state: &mut CorsairState) {
     corsair_state.remove_all_effects();
-    let effect = Effect::Static((1.0, 1.0, 1.0, 1.0));
+    let effect = Effect::Static([1.0, 1.0, 1.0, 1.0]);
     corsair_state.add_effect(effect);
 
     c.bench_function("static color opaque", |b| b.iter(|| corsair_state.get_led_colors()));
@@ -37,7 +38,7 @@ fn static_color_opaque(c: &mut Criterion, corsair_state: &mut CorsairState) {
 #[cfg(feature = "testable_privates")]
 fn static_color_opaque_2_layers(c: &mut Criterion, corsair_state: &mut CorsairState) {
     corsair_state.remove_all_effects();
-    let effect = Effect::Static((1.0, 1.0, 1.0, 1.0));
+    let effect = Effect::Static([1.0, 1.0, 1.0, 1.0]);
     corsair_state.add_effect(effect);
 
     c.bench_function("static color opaque 2 layers", |b| b.iter(|| corsair_state.get_led_colors()));
@@ -46,9 +47,9 @@ fn static_color_opaque_2_layers(c: &mut Criterion, corsair_state: &mut CorsairSt
 #[cfg(feature = "testable_privates")]
 fn static_color_transparent_2_layers(c: &mut Criterion, corsair_state: &mut CorsairState) {
     corsair_state.remove_all_effects();
-    let effect = Effect::Static((0.5, 0.5, 0.5, 0.5));
+    let effect = Effect::Static([0.5, 0.5, 0.5, 0.5]);
     corsair_state.add_effect(effect);
-    let effect = Effect::Static((0.8, 0.0, 0.0, 0.5));
+    let effect = Effect::Static([0.8, 0.0, 0.0, 0.5]);
     corsair_state.add_effect(effect);
 
     c.bench_function("static color transparent 2 layers", |b| b.iter(|| corsair_state.get_led_colors()));
@@ -57,21 +58,21 @@ fn static_color_transparent_2_layers(c: &mut Criterion, corsair_state: &mut Cors
 #[cfg(feature = "testable_privates")]
 fn static_color_transparent_8_layers(c: &mut Criterion, corsair_state: &mut CorsairState) {
     corsair_state.remove_all_effects();
-    let effect = Effect::Static((0.5, 0.5, 0.5, 0.5));
+    let effect = Effect::Static([0.5, 0.5, 0.5, 0.5]);
     corsair_state.add_effect(effect);
-    let effect = Effect::Static((0.8, 0.0, 0.0, 0.5));
+    let effect = Effect::Static([0.8, 0.0, 0.0, 0.5]);
     corsair_state.add_effect(effect);
-    let effect = Effect::Static((0.8, 0.0, 0.0, 0.5));
+    let effect = Effect::Static([0.8, 0.0, 0.0, 0.5]);
     corsair_state.add_effect(effect);
-    let effect = Effect::Static((0.8, 0.0, 0.0, 0.5));
+    let effect = Effect::Static([0.8, 0.0, 0.0, 0.5]);
     corsair_state.add_effect(effect);
-    let effect = Effect::Static((0.8, 0.0, 0.0, 0.5));
+    let effect = Effect::Static([0.8, 0.0, 0.0, 0.5]);
     corsair_state.add_effect(effect);
-    let effect = Effect::Static((0.8, 0.0, 0.0, 0.5));
+    let effect = Effect::Static([0.8, 0.0, 0.0, 0.5]);
     corsair_state.add_effect(effect);
-    let effect = Effect::Static((0.8, 0.0, 0.0, 0.5));
+    let effect = Effect::Static([0.8, 0.0, 0.0, 0.5]);
     corsair_state.add_effect(effect);
-    let effect = Effect::Static((0.8, 0.0, 0.0, 0.5));
+    let effect = Effect::Static([0.8, 0.0, 0.0, 0.5]);
     corsair_state.add_effect(effect);
 
     c.bench_function("static color transparent 8 layers", |b| b.iter(|| corsair_state.get_led_colors()));
@@ -85,27 +86,27 @@ fn get_wave_effect() -> Effect {
         keyframes: vec![
             Keyframe {
                 timestamp: 0.0,
-                color: (0.0,1.0,0.0,1.0)
+                color: [0.0,1.0,0.0,1.0]
             },
             Keyframe {
                 timestamp: 0.2,
-                color: (1.0,0.0,0.0,1.0)
+                color: [1.0,0.0,0.0,1.0]
             },
             Keyframe {
                 timestamp: 0.4,
-                color: (0.0,1.0,0.0,1.0)
+                color: [0.0,1.0,0.0,1.0]
             },
             Keyframe {
                 timestamp: 0.6,
-                color: (1.0,0.0,0.0,1.0)
+                color: [1.0,0.0,0.0,1.0]
             },
             Keyframe {
                 timestamp: 0.8,
-                color: (0.0,1.0,0.0,1.0)
+                color: [0.0,1.0,0.0,1.0]
             },
             Keyframe {
                 timestamp: 1.0,
-                color: (1.0,0.0,0.0,1.0)
+                color: [1.0,0.0,0.0,1.0]
             },
         ],
     };
@@ -136,27 +137,27 @@ fn get_ripple_effect() -> Effect {
         keyframes: vec![
             Keyframe {
                 timestamp: 0.0,
-                color: (0.0,1.0,0.0,1.0)
+                color: [0.0,1.0,0.0,1.0]
             },
             Keyframe {
                 timestamp: 0.2,
-                color: (1.0,0.0,0.0,1.0)
+                color: [1.0,0.0,0.0,1.0]
             },
             Keyframe {
                 timestamp: 0.4,
-                color: (0.0,1.0,0.0,1.0)
+                color: [0.0,1.0,0.0,1.0]
             },
             Keyframe {
                 timestamp: 0.6,
-                color: (1.0,0.0,0.0,1.0)
+                color: [1.0,0.0,0.0,1.0]
             },
             Keyframe {
                 timestamp: 0.8,
-                color: (0.0,1.0,0.0,1.0)
+                color: [0.0,1.0,0.0,1.0]
             },
             Keyframe {
                 timestamp: 1.0,
-                color: (1.0,0.0,0.0,1.0)
+                color: [1.0,0.0,0.0,1.0]
             },
         ],
     };
@@ -181,9 +182,9 @@ fn ripple_effect(c: &mut Criterion, corsair_state: &mut CorsairState) {
 #[cfg(feature = "testable_privates")]
 fn mix_1(c: &mut Criterion, corsair_state: &mut CorsairState) {
     corsair_state.remove_all_effects();
-    let effect = Effect::Static((0.5, 0.5, 0.5, 0.5));
+    let effect = Effect::Static([0.5, 0.5, 0.5, 0.5]);
     corsair_state.add_effect(effect);
-    let effect = Effect::Static((0.8, 0.0, 0.0, 0.5));
+    let effect = Effect::Static([0.8, 0.0, 0.0, 0.5]);
     corsair_state.add_effect(effect);
     let effect = get_ripple_effect();
     corsair_state.add_effect(effect);
